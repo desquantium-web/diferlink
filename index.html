@@ -30,7 +30,6 @@
         .icon-btn:hover { background: #e0e0e0; }
         .user-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; cursor: pointer; border: 2px solid transparent; background: var(--brand-gradient); background-clip: padding-box; }
 
-        /* Бейдж уведомлений */
         .badge { position: absolute; top: -2px; right: -2px; background: #e30000; color: white; border-radius: 50%; padding: 2px 6px; font-size: 10px; font-weight: bold; display: none; border: 2px solid var(--white); }
 
         /* Макет */
@@ -151,23 +150,37 @@
         .chat-preview:hover { background: var(--hover-bg); }
         .chat-preview img { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; }
         .chat-preview-info { flex: 1; overflow: hidden; }
-        .chat-preview-name { font-weight: 600; font-size: 15px; margin-bottom: 3px; }
+        .chat-preview-name { font-weight: 600; font-size: 15px; margin-bottom: 3px; display: flex; align-items: center; gap: 5px;}
         .chat-preview-text { font-size: 13px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .chat-preview-time { font-size: 11px; color: #999; }
         .chat-preview.saved-chat { background: linear-gradient(90deg, #fff8f0, #ffffff); }
         .chat-preview.saved-chat .chat-preview-name { color: var(--brand-solid); }
 
+        /* Индикатор онлайна */
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+        .status-dot.online { background-color: #31a24c; }
+        .status-dot.offline { background-color: #bcc0c4; }
+
         /* Окно чата */
         .chat-window { display: flex; flex-direction: column; height: 100%; }
         .chat-window-header { display: flex; align-items: center; gap: 15px; padding: 10px 20px; border-bottom: 1px solid var(--border-color); background: var(--white); }
         .chat-window-header img { width: 40px; height: 40px; border-radius: 50%; cursor: pointer; }
-        .chat-window-header h3 { font-size: 16px; cursor: pointer; }
+        .chat-header-info { display: flex; flex-direction: column; cursor: pointer; }
+        .chat-header-info h3 { font-size: 16px; }
+        .chat-header-info span { font-size: 12px; color: var(--text-muted); }
         .chat-messages { flex: 1; padding: 20px; overflow-y: auto; background: #fafafa; display: flex; flex-direction: column; gap: 15px; }
         
-        .msg-bubble { max-width: 75%; padding: 10px 15px; border-radius: 15px; font-size: 14px; line-height: 1.4; word-break: break-word; position: relative; }
+        .msg-bubble { max-width: 75%; padding: 10px 15px 25px 15px; border-radius: 15px; font-size: 14px; line-height: 1.4; word-break: break-word; position: relative; }
         .msg-bubble.mine { align-self: flex-end; background: var(--brand-gradient); color: white; border-bottom-right-radius: 2px; }
         .msg-bubble.theirs { align-self: flex-start; background: var(--white); color: var(--text-main); box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-bottom-left-radius: 2px; }
-        .msg-time { font-size: 10px; margin-top: 5px; opacity: 0.7; text-align: right; display: block; }
+        .msg-time { font-size: 10px; position: absolute; bottom: 5px; right: 10px; opacity: 0.7; }
+        .msg-edited { font-size: 10px; font-style: italic; opacity: 0.7; margin-right: 5px; }
+        
+        /* Действия с сообщением */
+        .msg-actions { position: absolute; bottom: 5px; left: 10px; display: flex; gap: 8px; }
+        .msg-bubble.mine .msg-actions { left: 10px; right: auto; }
+        .msg-action-icon { font-size: 12px; cursor: pointer; opacity: 0.6; transition: 0.2s; color: inherit; }
+        .msg-action-icon:hover { opacity: 1; }
 
         .chat-input-area { display: flex; gap: 5px; padding: 15px; background: var(--white); border-top: 1px solid var(--border-color); position: relative; align-items: center;}
         .chat-input-area input[type="text"] { flex: 1; border: 1px solid var(--border-color); border-radius: 20px; padding: 10px 15px; font-size: 14px; outline: none; }
@@ -184,7 +197,7 @@
         .attach-item i { width: 20px; color: var(--brand-solid); font-size: 16px; }
 
         /* Медиа в сообщениях */
-        .msg-file { display: flex; align-items: center; gap: 10px; min-width: 180px; }
+        .msg-file { display: flex; align-items: center; gap: 10px; min-width: 180px; margin-bottom: 10px;}
         .msg-file > i { font-size: 24px; opacity: 0.8; }
         .msg-file-info { flex: 1; overflow: hidden; }
         .msg-file-name { font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -192,12 +205,12 @@
         .msg-file-download { color: inherit; font-size: 18px; padding: 5px; border-radius: 50%; transition: 0.2s; }
         .msg-file-download:hover { background: rgba(0,0,0,0.1); }
 
-        .msg-audio { min-width: 200px; }
+        .msg-audio { min-width: 200px; margin-bottom: 10px;}
         .msg-audio-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
         .msg-audio-name { font-size: 13px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .msg-audio audio { width: 100%; height: 35px; }
 
-        .msg-poll { min-width: 230px; }
+        .msg-poll { min-width: 230px; margin-bottom: 10px;}
         .msg-poll-question { font-weight: 600; margin-bottom: 10px; font-size: 14px; }
         .msg-poll-option { position: relative; padding: 8px 12px; margin-bottom: 6px; border-radius: 8px; cursor: pointer; overflow: hidden; background: rgba(0,0,0,0.06); border: 1px solid transparent; transition: 0.2s; }
         .msg-poll-option:hover { border-color: rgba(0,0,0,0.15); }
@@ -580,7 +593,10 @@
                     <div class="chat-window-header">
                         <button class="icon-btn" onclick="switchView('messages')" style="background:transparent; width:auto;"><i class="fas fa-arrow-left"></i></button>
                         <img id="chatReceiverAvatar" src="" onclick="handleChatAvatarClick()">
-                        <h3 id="chatReceiverName" onclick="handleChatAvatarClick()">Имя</h3>
+                        <div class="chat-header-info" onclick="handleChatAvatarClick()">
+                            <h3 id="chatReceiverName">Имя</h3>
+                            <span id="chatReceiverStatus"></span>
+                        </div>
                     </div>
                     <div class="chat-messages" id="chatMessagesContainer"></div>
                     <div class="chat-input-area">
@@ -632,9 +648,6 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
 
     <script>
-        // ==========================================
-        // ВАШ КОНФИГ FIREBASE
-        // ==========================================
         const firebaseConfig = {
             apiKey: "AIzaSyA2TMSnE6mT_2NhFa0FW_cmzKdQH_XwlLI",
             authDomain: "diferlink-2285b.firebaseapp.com",
@@ -673,6 +686,8 @@
         let currentChatUser = null;
         let openComments = []; 
         let pollOptionsCount = 2;
+        let peerStatusListener = null;
+        let typingTimeout = null;
 
         let tempCoverBase64 = null, tempAvatarBase64 = null;
         let currentPostImageBase64 = null, currentStoryBase64 = null;
@@ -802,6 +817,7 @@
             const newUser = { 
                 name, email, password, 
                 friends: [],
+                lastActive: Date.now(),
                 avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=ff4d00&color=fff&size=150`,
                 cover: `https://dummyimage.com/1000x300/ff4d00/ffffff&text=${encodeURIComponent(name)}`
             };
@@ -832,11 +848,24 @@
             document.getElementById('createPostAvatar').src = currentUser.avatar;
             document.getElementById('postInput').placeholder = `Что у вас нового, ${currentUser.name.split(' ')[0]}?`;
             
+            // Обновляем статус "онлайн"
+            updatePresence();
+            setInterval(updatePresence, 30000); // Каждые 30 секунд обновляем статус
+
             initDataListeners();
             switchView('home');
         }
 
+        function updatePresence() {
+            if (currentUser && isFirebaseConfigured) {
+                db.ref('users/' + currentUser.email.replace(/\./g, '_')).update({ lastActive: Date.now() });
+            }
+        }
+
         document.getElementById('logoutBtn').onclick = () => {
+            if (currentUser && isFirebaseConfigured) {
+                db.ref('users/' + currentUser.email.replace(/\./g, '_')).update({ lastActive: 0, typingTo: null });
+            }
             currentUser = null;
             localStorage.removeItem('diferlink_current_user');
             document.getElementById('authModal').style.display = 'flex';
@@ -844,6 +873,7 @@
             document.getElementById('bottomNav').style.display = 'none';
             if (isFirebaseConfigured) {
                 db.ref('posts').off(); db.ref('stories').off(); db.ref('communities').off(); db.ref('messages').off(); db.ref('notifications').off(); db.ref('friendRequests').off();
+                if (peerStatusListener) peerStatusListener.off();
             }
         };
 
@@ -960,7 +990,6 @@
                     </div>
                 `;
 
-                // Помечаем как прочитанное
                 if (!n.read) {
                     n.read = true;
                     saveToDB('notifications/' + n.id, n);
@@ -1009,7 +1038,6 @@
         };
 
         window.acceptFriendRequest = async (fromEmail) => {
-            // Добавить в друзья
             if (!currentUser.friends) currentUser.friends = [];
             if (!currentUser.friends.includes(fromEmail)) currentUser.friends.push(fromEmail);
             saveToDB('users/' + currentUser.email.replace(/\./g, '_'), currentUser);
@@ -1021,7 +1049,6 @@
                 saveToDB('users/' + fromEmail.replace(/\./g, '_'), sender);
             }
 
-            // Уведомление отправителю
             const notifId = Date.now().toString();
             const notif = {
                 id: notifId,
@@ -1035,7 +1062,6 @@
             };
             saveToDB('notifications/' + notifId, notif);
 
-            // Удалить заявку и связанное уведомление
             const reqToRemove = allFriendRequests.find(r => r.fromEmail === fromEmail && r.toEmail === currentUser.email && r.status === 'pending');
             if (reqToRemove) deleteFromDB('friendRequests', reqToRemove.id);
             
@@ -1079,7 +1105,7 @@
         };
 
         // ==========================================
-        // ЧАТЫ
+        // ЧАТЫ (ИСПРАВЛЕННЫЙ ПОРЯДОК И СТАТУСЫ)
         // ==========================================
         async function renderMessagesList() {
             const container = document.getElementById('chatsListContainer');
@@ -1134,11 +1160,15 @@
                 
                 const time = new Date(chat.lastMsg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
 
+                // Статус собеседника в списке чатов
+                const isOnline = peerUser.lastActive && (Date.now() - peerUser.lastActive < 60000);
+                const statusDot = isOnline ? '<div class="status-dot online"></div>' : '<div class="status-dot offline"></div>';
+
                 container.innerHTML += `
                     <div class="chat-preview" onclick="switchView('chat', '${peerUser.email}')">
                         <img src="${peerUser.avatar}" alt="User">
                         <div class="chat-preview-info">
-                            <div class="chat-preview-name">${peerUser.name}</div>
+                            <div class="chat-preview-name">${peerUser.name} ${statusDot}</div>
                             <div class="chat-preview-text">${previewText}</div>
                         </div>
                         <div class="chat-preview-time">${time}</div>
@@ -1151,6 +1181,7 @@
             peerEmail = peerEmail.toLowerCase();
             if (peerEmail === currentUser.email) {
                 currentChatUser = { email: currentUser.email, name: 'Избранное', avatar: savedIconSvg, isSaved: true };
+                document.getElementById('chatReceiverStatus').innerHTML = '';
             } else {
                 const peerUser = await getUserFromDB(peerEmail);
                 if (!peerUser) return alert('Пользователь не найден');
@@ -1160,6 +1191,40 @@
             document.getElementById('chatReceiverAvatar').src = currentChatUser.avatar;
             document.getElementById('chatReceiverName').innerText = currentChatUser.name;
             
+            // Подписка на статус собеседника
+            if (peerStatusListener) peerStatusListener.off();
+            if (isFirebaseConfigured && !currentChatUser.isSaved) {
+                peerStatusListener = db.ref('users/' + peerEmail.replace(/\./g, '_'));
+                peerStatusListener.on('value', (snap) => {
+                    const peer = snap.val();
+                    if (!peer) return;
+                    const now = Date.now();
+                    const isOnline = peer.lastActive && (now - peer.lastActive < 60000);
+                    const isTyping = peer.typingTo === currentUser.email;
+                    
+                    let statusText = '';
+                    let statusColor = 'var(--text-muted)';
+                    
+                    if (isTyping) {
+                        statusText = 'печатает...';
+                        statusColor = 'var(--brand-solid)';
+                    } else if (isOnline) {
+                        statusText = 'в сети';
+                        statusColor = '#31a24c';
+                    } else if (peer.lastActive) {
+                        const diffMins = Math.floor((now - peer.lastActive) / 60000);
+                        if (diffMins < 60) statusText = `был(а) ${diffMins} мин. назад`;
+                        else statusText = 'был(а) давно';
+                    } else {
+                        statusText = 'офлайн';
+                    }
+
+                    document.getElementById('chatReceiverStatus').innerHTML = `<span style="color: ${statusColor}">${statusText}</span>`;
+                });
+            } else if (!isFirebaseConfigured) {
+                document.getElementById('chatReceiverStatus').innerText = 'в сети (локально)';
+            }
+
             renderChatMessages();
             document.getElementById('chatInput').focus();
         }
@@ -1169,6 +1234,16 @@
                 switchView('profile', currentChatUser.email);
             }
         };
+
+        // Отправка сигнала "печатает"
+        document.getElementById('chatInput').addEventListener('input', () => {
+            if (!isFirebaseConfigured || !currentChatUser || currentChatUser.isSaved) return;
+            db.ref('users/' + currentUser.email.replace(/\./g, '_')).update({ typingTo: currentChatUser.email });
+            clearTimeout(typingTimeout);
+            typingTimeout = setTimeout(() => {
+                if (isFirebaseConfigured) db.ref('users/' + currentUser.email.replace(/\./g, '_')).update({ typingTo: null });
+            }, 2000);
+        });
 
         function formatFileSize(bytes) {
             if (bytes < 1024) return bytes + ' B';
@@ -1221,8 +1296,28 @@
             } else {
                 content = msg.text;
             }
-            
-            return `<div class="msg-bubble ${isMine ? 'mine' : 'theirs'}">${content}<span class="msg-time">${time}</span></div>`;
+
+            // Действия с сообщением (только для своих)
+            let actionsHTML = '';
+            if (isMine) {
+                actionsHTML = `
+                    <div class="msg-actions">
+                        <i class="fas fa-pen msg-action-icon" onclick="editMessage('${msg.id}')" title="Редактировать"></i>
+                        <i class="fas fa-trash msg-action-icon" onclick="deleteMessage('${msg.id}')" title="Удалить"></i>
+                    </div>
+                `;
+            }
+
+            const editedLabel = msg.edited ? '<span class="msg-edited">(изменено)</span>' : '';
+
+            return `<div class="msg-bubble ${isMine ? 'mine' : 'theirs'}">
+                        ${content}
+                        ${actionsHTML}
+                        <div style="display:flex; justify-content:flex-end; align-items:center; margin-top:5px; gap:5px;">
+                            ${editedLabel}
+                            <span class="msg-time" style="position:static;">${time}</span>
+                        </div>
+                    </div>`;
         }
 
         function renderChatMessages() {
@@ -1230,10 +1325,14 @@
             const container = document.getElementById('chatMessagesContainer');
             container.innerHTML = '';
 
+            // ИСПРАВЛЕННАЯ СОРТИРОВКА: по времени, затем по ID (для точности)
             const chatMsgs = allMessages.filter(m => 
                 (m.senderEmail === currentUser.email && m.receiverEmail === currentChatUser.email) ||
                 (m.senderEmail === currentChatUser.email && m.receiverEmail === currentUser.email)
-            ).sort((a, b) => a.timestamp - b.timestamp);
+            ).sort((a, b) => {
+                if (a.timestamp !== b.timestamp) return a.timestamp - b.timestamp;
+                return String(a.id).localeCompare(String(b.id));
+            });
 
             if (chatMsgs.length === 0) {
                 const hint = currentChatUser.isSaved ? 'Здесь вы можете сохранять важные сообщения, файлы, музыку и создавать опросы.' : 'Начните диалог первым!';
@@ -1265,16 +1364,47 @@
                 receiverEmail: currentChatUser.email,
                 type: 'text',
                 text: text,
-                timestamp: Date.now()
+                timestamp: Date.now(),
+                edited: false
             };
 
             saveToDB('messages/' + newMsg.id, newMsg);
             input.value = '';
 
+            // Сбрасываем статус "печатает"
+            if (isFirebaseConfigured && !currentChatUser.isSaved) {
+                db.ref('users/' + currentUser.email.replace(/\./g, '_')).update({ typingTo: null });
+                clearTimeout(typingTimeout);
+            }
+
             if (!isFirebaseConfigured) {
                 allMessages.push(newMsg);
                 localStorage.setItem('diferlink_messages', JSON.stringify(allMessages));
                 renderChatMessages();
+            }
+        };
+
+        // === РЕДАКТИРОВАНИЕ И УДАЛЕНИЕ СООБЩЕНИЙ ===
+        window.editMessage = (msgId) => {
+            const msg = allMessages.find(m => String(m.id) === String(msgId));
+            if (!msg) return;
+            const newText = prompt('Редактировать сообщение:', msg.text);
+            if (newText !== null && newText.trim() !== '' && newText.trim() !== msg.text) {
+                msg.text = newText.trim();
+                msg.edited = true;
+                saveToDB('messages/' + msg.id, msg);
+                if (!isFirebaseConfigured) {
+                    renderChatMessages();
+                }
+            }
+        };
+
+        window.deleteMessage = (msgId) => {
+            if (confirm('Удалить сообщение?')) {
+                deleteFromDB('messages', msgId);
+                if (!isFirebaseConfigured) {
+                    renderChatMessages();
+                }
             }
         };
 
@@ -1772,7 +1902,7 @@
         };
 
         // ==========================================
-        // ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ (С кнопками друзей)
+        // ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ
         // ==========================================
         async function renderProfile(email) {
             email = email.toLowerCase();
