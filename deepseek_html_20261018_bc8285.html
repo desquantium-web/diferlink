@@ -26,9 +26,12 @@
         .header-search { background: var(--bg-color); border-radius: 20px; padding: 8px 15px; display: flex; align-items: center; width: 300px; }
         .header-search input { border: none; background: transparent; outline: none; width: 100%; margin-left: 10px; font-size: 14px; }
         .header-icons { display: flex; gap: 15px; align-items: center; }
-        .icon-btn { width: 40px; height: 40px; border-radius: 50%; background: var(--bg-color); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; }
+        .icon-btn { width: 40px; height: 40px; border-radius: 50%; background: var(--bg-color); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; position: relative; }
         .icon-btn:hover { background: #e0e0e0; }
         .user-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; cursor: pointer; border: 2px solid transparent; background: var(--brand-gradient); background-clip: padding-box; }
+
+        /* Бейдж уведомлений */
+        .badge { position: absolute; top: -2px; right: -2px; background: #e30000; color: white; border-radius: 50%; padding: 2px 6px; font-size: 10px; font-weight: bold; display: none; border: 2px solid var(--white); }
 
         /* Макет */
         .app-container { display: flex; justify-content: center; max-width: 1400px; margin: 80px auto 20px; padding: 0 20px; gap: 24px; }
@@ -107,8 +110,8 @@
         .comment-input-area input:focus { border-color: var(--brand-solid); }
         .comment-input-area button { background: var(--brand-gradient); color: white; border: none; border-radius: 50%; width: 34px; height: 34px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
 
-        /* Профили */
-        .profile-page, .community-page, .communities-list-page, .messages-list-page, .chat-page { width: 100%; max-width: 900px; display: none; flex-direction: column; gap: 20px; }
+        /* Профили и страницы */
+        .profile-page, .community-page, .communities-list-page, .messages-list-page, .chat-page, .notifications-page { width: 100%; max-width: 900px; display: none; flex-direction: column; gap: 20px; }
         .profile-header-card { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; position: relative; padding-bottom: 20px; }
         .profile-cover { width: 100%; height: 250px; background: var(--brand-gradient); object-fit: cover; }
         .profile-info-container { padding: 0 30px; position: relative; display: flex; flex-direction: column; align-items: center; margin-top: -60px; text-align: center; }
@@ -120,7 +123,7 @@
         .stat-value { font-weight: 700; font-size: 18px; display: block; }
         .stat-label { color: var(--text-muted); font-size: 13px; }
         .edit-profile-btn { position: absolute; right: 30px; top: 20px; background: var(--bg-color); border: 1px solid var(--border-color); padding: 8px 15px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; }
-        .profile-actions { display: flex; gap: 10px; margin-top: 10px; justify-content: center; }
+        .profile-actions { display: flex; gap: 10px; margin-top: 10px; justify-content: center; flex-wrap: wrap; }
         .profile-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
         .profile-grid .post { margin-bottom: 0; }
         .profile-grid .post-content p { display: none; }
@@ -208,6 +211,17 @@
         .msg-bubble.mine .msg-poll-bar { background: rgba(255,255,255,0.35); }
         .msg-bubble.mine .msg-poll-option.voted { border-color: white; }
 
+        /* Уведомления */
+        .notification-item { display: flex; gap: 15px; padding: 15px 20px; border-bottom: 1px solid var(--border-color); align-items: center; }
+        .notification-item img { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; cursor: pointer; }
+        .notification-info { flex: 1; }
+        .notification-text { font-size: 14px; }
+        .notification-time { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+        .notification-actions { display: flex; gap: 10px; margin-top: 10px; }
+        .notification-actions button { padding: 6px 12px; font-size: 12px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; }
+        .btn-accept { background: var(--brand-gradient); color: white; }
+        .btn-decline { background: #e4e6eb; color: #1c1e21; }
+
         /* Модальные окна */
         .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(5px); display: none; justify-content: center; align-items: center; z-index: 2000; overflow-y: auto; padding: 20px; }
         .modal-card { background: var(--white); width: 100%; max-width: 450px; padding: 30px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); margin: auto; }
@@ -280,7 +294,7 @@
             .communities-grid { grid-template-columns: 1fr; }
             
             .messages-layout { height: calc(100vh - 120px); border-radius: 0; }
-            .profile-page, .community-page, .communities-list-page, .messages-list-page, .chat-page { padding: 10px; }
+            .profile-page, .community-page, .communities-list-page, .messages-list-page, .chat-page, .notifications-page { padding: 10px; }
         }
     </style>
 </head>
@@ -437,8 +451,11 @@
             <input type="text" placeholder="Поиск в Diferlink">
         </div>
         <div class="header-icons">
+            <div class="icon-btn" id="notificationBell" onclick="switchView('notifications')">
+                <i class="fas fa-bell"></i>
+                <span class="badge" id="notificationBadge">0</span>
+            </div>
             <div class="icon-btn" onclick="switchView('messages')"><i class="fas fa-comment-dots"></i></div>
-            <div class="icon-btn"><i class="fas fa-bell"></i></div>
             <img src="" alt="Profile" class="user-avatar user-btn" id="headerAvatar" style="display:none;">
         </div>
     </header>
@@ -450,6 +467,7 @@
             <div class="nav-item active" id="navHome"><i class="fas fa-home"></i> Главная</div>
             <div class="nav-item" id="navMessages"><i class="fas fa-comment-dots"></i> Сообщения</div>
             <div class="nav-item" id="navCommunities"><i class="fas fa-users"></i> Сообщества</div>
+            <div class="nav-item" id="navNotifications"><i class="fas fa-bell"></i> Уведомления</div>
             <div class="nav-item" id="navProfile"><i class="fas fa-user-circle"></i> Мой аккаунт</div>
             <div class="nav-item logout-btn" id="logoutBtn"><i class="fas fa-sign-out-alt" style="color: #e30000;"></i> Выйти</div>
             <div class="operclose-brand"><span>&copy; 2024 OperClose</span></div>
@@ -498,9 +516,7 @@
                     <img src="" alt="Avatar" class="profile-avatar" id="profileAvatar">
                     <h2 class="profile-name" id="profileName">Имя</h2>
                     <span class="profile-email" id="profileEmail">email@example.com</span>
-                    <div class="profile-actions">
-                        <button class="btn-primary" id="messageUserBtn" style="display: none; width: auto; padding: 10px 20px;"><i class="fas fa-envelope"></i> Написать</button>
-                    </div>
+                    <div class="profile-actions" id="profileActions"></div>
                     <div class="profile-stats">
                         <div class="stat-item"><span class="stat-value" id="statPosts">0</span><span class="stat-label">Посты</span></div>
                     </div>
@@ -539,6 +555,14 @@
                 <button class="action-btn" id="backToCommunitiesBtn" style="color: var(--brand-solid); font-weight: 600;"><i class="fas fa-arrow-left"></i> Назад</button>
             </div>
             <div id="communityPostsContainer" class="feed" style="max-width: 100%;"></div>
+        </main>
+
+        <!-- СТРАНИЦА УВЕДОМЛЕНИЙ -->
+        <main class="notifications-page" id="notificationsPage">
+            <div class="messages-layout">
+                <div class="messages-header"><i class="fas fa-bell" style="color:var(--brand-solid)"></i> Уведомления</div>
+                <div class="chats-list" id="notificationsListContainer"></div>
+            </div>
         </main>
 
         <!-- СТРАНИЦА СПИСКА СООБЩЕНИЙ (ИНБОКС) -->
@@ -603,13 +627,13 @@
         <div class="icon-btn" id="mobNavProfile"><i class="fas fa-user"></i></div>
     </nav>
 
-    <!-- FIREBASE (Версия compat для старых скриптов) -->
+    <!-- FIREBASE -->
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
 
     <script>
         // ==========================================
-        // ВАШ КОНФИГ FIREBASE (Уже вставлен)
+        // ВАШ КОНФИГ FIREBASE
         // ==========================================
         const firebaseConfig = {
             apiKey: "AIzaSyA2TMSnE6mT_2NhFa0FW_cmzKdQH_XwlLI",
@@ -624,18 +648,17 @@
         let db = null;
         let isFirebaseConfigured = false;
 
-        // Проверяем, что ключ не равен заглушке
         if (firebaseConfig.apiKey !== "ВАШ_API_KEY") {
             try {
                 firebase.initializeApp(firebaseConfig);
                 db = firebase.database();
                 isFirebaseConfigured = true;
-                console.log("✅ Firebase успешно подключен! Работаем в онлайн-режиме.");
+                console.log("✅ Firebase успешно подключен!");
             } catch (e) {
                 console.error("❌ Ошибка подключения Firebase:", e);
             }
         } else {
-            console.log("⚠️ Firebase не настроен. Работаем в локальном режиме.");
+            console.log("⚠️ Firebase не настроен. Работаем локально.");
         }
 
         let currentUser = null;
@@ -643,6 +666,8 @@
         let allStories = [];
         let allCommunities = [];
         let allMessages = [];
+        let allNotifications = [];
+        let allFriendRequests = [];
         let currentProfileViewEmail = null;
         let currentCommunityViewId = null;
         let currentChatUser = null;
@@ -654,7 +679,6 @@
         let tempCommCoverBase64 = null, tempCommAvatarBase64 = null;
         let tempEditCommCoverBase64 = null, tempEditCommAvatarBase64 = null;
 
-        // Иконка "Избранное" (SVG)
         const savedIconSvg = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="%23e30000"/><stop offset="1" stop-color="%23ff7b00"/></linearGradient></defs><rect width="100" height="100" rx="50" fill="url(%23g)"/><path d="M32 25h36v52L50 63 32 77V25z" fill="white"/></svg>`;
 
         // ==========================================
@@ -680,12 +704,25 @@
                     if (document.getElementById('messagesListPage').style.display === 'flex') renderMessagesList();
                     if (document.getElementById('chatPage').style.display === 'flex' && currentChatUser) renderChatMessages();
                 });
+                db.ref('notifications').on('value', (snap) => {
+                    allNotifications = snap.val() ? Object.values(snap.val()) : [];
+                    updateNotificationBadge();
+                    if (document.getElementById('notificationsPage').style.display === 'flex') renderNotifications();
+                });
+                db.ref('friendRequests').on('value', (snap) => {
+                    allFriendRequests = snap.val() ? Object.values(snap.val()) : [];
+                    if (currentProfileViewEmail) renderProfile(currentProfileViewEmail);
+                    if (document.getElementById('notificationsPage').style.display === 'flex') renderNotifications();
+                });
             } else {
                 allPosts = JSON.parse(localStorage.getItem('diferlink_posts')) || [];
                 allStories = JSON.parse(localStorage.getItem('diferlink_stories')) || [];
                 allCommunities = JSON.parse(localStorage.getItem('diferlink_communities')) || [];
                 allMessages = JSON.parse(localStorage.getItem('diferlink_messages')) || [];
+                allNotifications = JSON.parse(localStorage.getItem('diferlink_notifications')) || [];
+                allFriendRequests = JSON.parse(localStorage.getItem('diferlink_friendRequests')) || [];
                 renderFeed(); renderStories(); renderCommunitiesList(); updateCommunitySelect();
+                updateNotificationBadge();
                 if (currentProfileViewEmail) renderProfile(currentProfileViewEmail);
             }
         }
@@ -702,7 +739,7 @@
         }
         
         function deleteFromDB(path, id) {
-            if (isFirebaseConfigured) db.ref(path + '/' + id).remove();
+            if (isFirebaseConfigured) db.ref(path).child(id).remove();
             else {
                 const key = 'diferlink_' + path;
                 let arr = JSON.parse(localStorage.getItem(key)) || [];
@@ -713,11 +750,12 @@
         }
 
         async function getUserFromDB(email) {
+            email = email.toLowerCase();
             if (isFirebaseConfigured) {
                 const snap = await db.ref('users/' + email.replace(/\./g, '_')).once('value');
                 return snap.val();
             }
-            return (JSON.parse(localStorage.getItem('diferlink_users')) || []).find(u => u.email === email);
+            return (JSON.parse(localStorage.getItem('diferlink_users')) || []).find(u => u.email.toLowerCase() === email);
         }
 
         setInterval(() => {
@@ -726,7 +764,7 @@
             allPosts.forEach(post => {
                 if (post.expiresAt && post.expiresAt < now) {
                     hasExpired = true;
-                    if (isFirebaseConfigured) db.ref('posts/' + post.id).remove();
+                    if (isFirebaseConfigured) db.ref('posts').child(post.id).remove();
                 }
             });
             if (hasExpired && !isFirebaseConfigured) {
@@ -755,7 +793,7 @@
         document.getElementById('registerForm').onsubmit = async (e) => {
             e.preventDefault();
             const name = document.getElementById('regName').value.trim();
-            const email = document.getElementById('regEmail').value.trim();
+            const email = document.getElementById('regEmail').value.trim().toLowerCase();
             const password = document.getElementById('regPassword').value;
             
             const existingUser = await getUserFromDB(email);
@@ -763,6 +801,7 @@
 
             const newUser = { 
                 name, email, password, 
+                friends: [],
                 avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=ff4d00&color=fff&size=150`,
                 cover: `https://dummyimage.com/1000x300/ff4d00/ffffff&text=${encodeURIComponent(name)}`
             };
@@ -772,7 +811,7 @@
 
         document.getElementById('loginForm').onsubmit = async (e) => {
             e.preventDefault();
-            const email = document.getElementById('loginEmail').value.trim();
+            const email = document.getElementById('loginEmail').value.trim().toLowerCase();
             const password = document.getElementById('loginPassword').value;
             const user = await getUserFromDB(email);
             if (user && user.password === password) loginUser(user);
@@ -780,6 +819,8 @@
         };
 
         function loginUser(user) {
+            user.email = user.email.toLowerCase();
+            if (!user.friends) user.friends = [];
             currentUser = user;
             localStorage.setItem('diferlink_current_user', JSON.stringify(user));
             document.getElementById('authModal').style.display = 'none';
@@ -802,7 +843,7 @@
             document.getElementById('mainContainer').style.display = 'none';
             document.getElementById('bottomNav').style.display = 'none';
             if (isFirebaseConfigured) {
-                db.ref('posts').off(); db.ref('stories').off(); db.ref('communities').off(); db.ref('messages').off();
+                db.ref('posts').off(); db.ref('stories').off(); db.ref('communities').off(); db.ref('messages').off(); db.ref('notifications').off(); db.ref('friendRequests').off();
             }
         };
 
@@ -816,6 +857,7 @@
             document.getElementById('communityPage').style.display = 'none';
             document.getElementById('messagesListPage').style.display = 'none';
             document.getElementById('chatPage').style.display = 'none';
+            document.getElementById('notificationsPage').style.display = 'none';
             
             document.querySelectorAll('.nav-item, .bottom-nav .icon-btn').forEach(el => el.classList.remove('active'));
 
@@ -848,6 +890,10 @@
                 document.getElementById('navMessages').classList.add('active');
                 document.getElementById('mobNavMessages').classList.add('active');
                 openChat(id);
+            } else if (view === 'notifications') {
+                document.getElementById('notificationsPage').style.display = 'flex';
+                document.getElementById('navNotifications').classList.add('active');
+                renderNotifications();
             }
         }
 
@@ -862,6 +908,175 @@
         document.getElementById('backToCommunitiesBtn').onclick = () => switchView('communities');
         document.getElementById('navMessages').onclick = () => switchView('messages');
         document.getElementById('mobNavMessages').onclick = () => switchView('messages');
+        document.getElementById('navNotifications').onclick = () => switchView('notifications');
+
+        // ==========================================
+        // УВЕДОМЛЕНИЯ И ДРУЗЬЯ
+        // ==========================================
+        function updateNotificationBadge() {
+            const unread = allNotifications.filter(n => n.toEmail === currentUser.email && !n.read).length;
+            const badge = document.getElementById('notificationBadge');
+            if (unread > 0) {
+                badge.innerText = unread;
+                badge.style.display = 'block';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
+        function renderNotifications() {
+            const container = document.getElementById('notificationsListContainer');
+            container.innerHTML = '';
+
+            const myNotifs = allNotifications.filter(n => n.toEmail === currentUser.email).sort((a,b) => b.timestamp - a.timestamp);
+
+            if (myNotifs.length === 0) {
+                container.innerHTML = '<p style="text-align:center; color:var(--text-muted); padding: 20px;">У вас пока нет уведомлений.</p>';
+                return;
+            }
+
+            myNotifs.forEach(n => {
+                let actionsHTML = '';
+                if (n.type === 'friend_request' && !n.read) {
+                    actionsHTML = `
+                        <div class="notification-actions">
+                            <button class="btn-accept" onclick="acceptFriendRequest('${n.fromEmail}')">Принять</button>
+                            <button class="btn-decline" onclick="declineFriendRequest('${n.fromEmail}')">Отклонить</button>
+                        </div>`;
+                }
+                
+                let text = '';
+                if (n.type === 'friend_request') text = `<b>${n.fromName}</b> хочет добавить вас в друзья.`;
+                if (n.type === 'friend_accepted') text = `<b>${n.fromName}</b> принял(а) вашу заявку в друзья.`;
+
+                container.innerHTML += `
+                    <div class="notification-item">
+                        <img src="${n.fromAvatar}" onclick="switchView('profile', '${n.fromEmail}')">
+                        <div class="notification-info">
+                            <div class="notification-text">${text}</div>
+                            <div class="notification-time">${new Date(n.timestamp).toLocaleString()}</div>
+                            ${actionsHTML}
+                        </div>
+                    </div>
+                `;
+
+                // Помечаем как прочитанное
+                if (!n.read) {
+                    n.read = true;
+                    saveToDB('notifications/' + n.id, n);
+                }
+            });
+            
+            updateNotificationBadge();
+        }
+
+        window.sendFriendRequest = (toEmail) => {
+            if (toEmail === currentUser.email) return;
+            const existing = allFriendRequests.find(r => r.fromEmail === currentUser.email && r.toEmail === toEmail && r.status === 'pending');
+            if (existing) return alert('Заявка уже отправлена');
+
+            const requestId = Date.now().toString();
+            const request = {
+                id: requestId,
+                fromEmail: currentUser.email,
+                toEmail: toEmail,
+                status: 'pending',
+                timestamp: Date.now()
+            };
+            saveToDB('friendRequests/' + requestId, request);
+
+            const notifId = (Date.now() + 1).toString();
+            const notif = {
+                id: notifId,
+                toEmail: toEmail,
+                fromEmail: currentUser.email,
+                fromName: currentUser.name,
+                fromAvatar: currentUser.avatar,
+                type: 'friend_request',
+                timestamp: Date.now(),
+                read: false
+            };
+            saveToDB('notifications/' + notifId, notif);
+
+            if (!isFirebaseConfigured) {
+                allFriendRequests.push(request);
+                allNotifications.push(notif);
+                localStorage.setItem('diferlink_friendRequests', JSON.stringify(allFriendRequests));
+                localStorage.setItem('diferlink_notifications', JSON.stringify(allNotifications));
+                renderProfile(toEmail);
+                updateNotificationBadge();
+            }
+        };
+
+        window.acceptFriendRequest = async (fromEmail) => {
+            // Добавить в друзья
+            if (!currentUser.friends) currentUser.friends = [];
+            if (!currentUser.friends.includes(fromEmail)) currentUser.friends.push(fromEmail);
+            saveToDB('users/' + currentUser.email.replace(/\./g, '_'), currentUser);
+
+            const sender = await getUserFromDB(fromEmail);
+            if (sender) {
+                if (!sender.friends) sender.friends = [];
+                if (!sender.friends.includes(currentUser.email)) sender.friends.push(currentUser.email);
+                saveToDB('users/' + fromEmail.replace(/\./g, '_'), sender);
+            }
+
+            // Уведомление отправителю
+            const notifId = Date.now().toString();
+            const notif = {
+                id: notifId,
+                toEmail: fromEmail,
+                fromEmail: currentUser.email,
+                fromName: currentUser.name,
+                fromAvatar: currentUser.avatar,
+                type: 'friend_accepted',
+                timestamp: Date.now(),
+                read: false
+            };
+            saveToDB('notifications/' + notifId, notif);
+
+            // Удалить заявку и связанное уведомление
+            const reqToRemove = allFriendRequests.find(r => r.fromEmail === fromEmail && r.toEmail === currentUser.email && r.status === 'pending');
+            if (reqToRemove) deleteFromDB('friendRequests', reqToRemove.id);
+            
+            const notifToRemove = allNotifications.find(n => n.type === 'friend_request' && n.fromEmail === fromEmail && n.toEmail === currentUser.email);
+            if (notifToRemove) deleteFromDB('notifications', notifToRemove.id);
+
+            if (!isFirebaseConfigured) {
+                localStorage.setItem('diferlink_current_user', JSON.stringify(currentUser));
+                renderNotifications();
+                renderProfile(currentProfileViewEmail);
+            }
+        };
+
+        window.declineFriendRequest = (fromEmail) => {
+            const reqToRemove = allFriendRequests.find(r => r.fromEmail === fromEmail && r.toEmail === currentUser.email && r.status === 'pending');
+            if (reqToRemove) deleteFromDB('friendRequests', reqToRemove.id);
+            
+            const notifToRemove = allNotifications.find(n => n.type === 'friend_request' && n.fromEmail === fromEmail && n.toEmail === currentUser.email);
+            if (notifToRemove) deleteFromDB('notifications', notifToRemove.id);
+
+            if (!isFirebaseConfigured) {
+                renderNotifications();
+                renderProfile(currentProfileViewEmail);
+            }
+        };
+
+        window.removeFriend = async (friendEmail) => {
+            currentUser.friends = currentUser.friends.filter(e => e !== friendEmail);
+            saveToDB('users/' + currentUser.email.replace(/\./g, '_'), currentUser);
+            
+            const friend = await getUserFromDB(friendEmail);
+            if (friend) {
+                friend.friends = (friend.friends || []).filter(e => e !== currentUser.email);
+                saveToDB('users/' + friendEmail.replace(/\./g, '_'), friend);
+            }
+
+            if (!isFirebaseConfigured) {
+                localStorage.setItem('diferlink_current_user', JSON.stringify(currentUser));
+                renderProfile(currentProfileViewEmail);
+            }
+        };
 
         // ==========================================
         // ЧАТЫ
@@ -870,7 +1085,6 @@
             const container = document.getElementById('chatsListContainer');
             container.innerHTML = '';
 
-            // Всегда первым добавляем "Избранное"
             let savedLastMsg = null;
             allMessages.forEach(msg => {
                 if (msg.senderEmail === currentUser.email && msg.receiverEmail === currentUser.email) {
@@ -892,24 +1106,18 @@
                 </div>
             `;
 
-            // Группируем остальные сообщения
             const chats = {};
             allMessages.forEach(msg => {
-                if (msg.senderEmail === currentUser.email && msg.receiverEmail === currentUser.email) return; // Пропускаем избранное
-                
+                if (msg.senderEmail === currentUser.email && msg.receiverEmail === currentUser.email) return;
                 let peerEmail = msg.senderEmail === currentUser.email ? msg.receiverEmail : msg.senderEmail;
-                
-                if (!chats[peerEmail]) {
-                    chats[peerEmail] = { lastMsg: msg, peerEmail: peerEmail };
-                } else if (msg.timestamp > chats[peerEmail].lastMsg.timestamp) {
-                    chats[peerEmail].lastMsg = msg;
-                }
+                if (!chats[peerEmail]) chats[peerEmail] = { lastMsg: msg, peerEmail: peerEmail };
+                else if (msg.timestamp > chats[peerEmail].lastMsg.timestamp) chats[peerEmail].lastMsg = msg;
             });
 
             const chatList = Object.values(chats).sort((a, b) => b.lastMsg.timestamp - a.lastMsg.timestamp);
 
             if (chatList.length === 0) {
-                container.innerHTML += '<p style="text-align:center; color:var(--text-muted); padding: 20px; font-size: 13px;">Найдите друга в профиле и нажмите "Написать", чтобы начать диалог.</p>';
+                container.innerHTML += '<p style="text-align:center; color:var(--text-muted); padding: 20px; font-size: 13px;">Найдите друга в профиле и нажмите "Написать".</p>';
                 return;
             }
 
@@ -940,11 +1148,12 @@
         }
 
         async function openChat(peerEmail) {
+            peerEmail = peerEmail.toLowerCase();
             if (peerEmail === currentUser.email) {
                 currentChatUser = { email: currentUser.email, name: 'Избранное', avatar: savedIconSvg, isSaved: true };
             } else {
                 const peerUser = await getUserFromDB(peerEmail);
-                if (!peerUser) return;
+                if (!peerUser) return alert('Пользователь не найден');
                 currentChatUser = peerUser;
             }
             
@@ -1201,11 +1410,8 @@
             if (!option.votes) option.votes = [];
             
             const idx = option.votes.indexOf(currentUser.email);
-            if (idx > -1) {
-                option.votes.splice(idx, 1);
-            } else {
-                option.votes.push(currentUser.email);
-            }
+            if (idx > -1) option.votes.splice(idx, 1);
+            else option.votes.push(currentUser.email);
             
             saveToDB('messages/' + msg.id, msg);
             if (!isFirebaseConfigured) {
@@ -1296,417 +1502,4 @@
         function renderCommunitiesList() {
             const grid = document.getElementById('communitiesGrid');
             grid.innerHTML = '';
-            if (allCommunities.length === 0) {
-                grid.innerHTML = '<p style="color:var(--text-muted); grid-column: 1/-1; text-align: center;">Пока нет сообществ. Создайте первое!</p>';
-                return;
-            }
-            [...allCommunities].sort((a,b) => b.timestamp - a.timestamp).forEach(c => {
-                grid.innerHTML += `
-                    <div class="community-card" onclick="switchView('community', '${c.id}')">
-                        <img src="${c.cover || 'https://dummyimage.com/500x200/ff4d00/ffffff&text=' + encodeURIComponent(c.name)}" class="community-card-cover">
-                        <div class="community-card-info">
-                            <img src="${c.avatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(c.name) + '&background=f0f2f5&color=333'}" class="community-card-avatar">
-                            <div>
-                                <h3>${c.name}</h3>
-                                <p>${c.description ? (c.description.length > 40 ? c.description.substring(0,40)+'...' : c.description) : 'Без описания'}</p>
-                            </div>
-                        </div>
-                    </div>`;
-            });
-        }
-
-        document.getElementById('commCoverUpload').onchange = function(e) {
-            const file = e.target.files[0];
-            if (file) { const r = new FileReader(); r.onload = (ev) => { tempCommCoverBase64 = ev.target.result; document.getElementById('commCoverLabel').innerText = 'Фото выбрано ✓'; }; r.readAsDataURL(file); }
-        };
-        document.getElementById('commAvatarUpload').onchange = function(e) {
-            const file = e.target.files[0];
-            if (file) { const r = new FileReader(); r.onload = (ev) => { tempCommAvatarBase64 = ev.target.result; document.getElementById('commAvatarLabel').innerText = 'Фото выбрано ✓'; }; r.readAsDataURL(file); }
-        };
-
-        document.getElementById('saveNewCommunityBtn').onclick = () => {
-            const name = document.getElementById('commName').value.trim();
-            const desc = document.getElementById('commDesc').value.trim();
-            if (!name) return alert('Введите название сообщества!');
-
-            const newComm = {
-                id: Date.now().toString(),
-                name: name,
-                description: desc,
-                avatar: tempCommAvatarBase64 || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=ff4d00&color=fff`,
-                cover: tempCommCoverBase64 || `https://dummyimage.com/1000x300/ff4d00/ffffff&text=${encodeURIComponent(name)}`,
-                creatorEmail: currentUser.email,
-                timestamp: Date.now()
-            };
-
-            saveToDB('communities/' + newComm.id, newComm);
-            tempCommCoverBase64 = null; tempCommAvatarBase64 = null;
-            document.getElementById('commName').value = ''; document.getElementById('commDesc').value = '';
-            document.getElementById('commCoverLabel').innerText = 'Выбрать фото'; document.getElementById('commAvatarLabel').innerText = 'Выбрать фото';
-            document.getElementById('createCommunityModal').style.display = 'none';
-            
-            if (!isFirebaseConfigured) { renderCommunitiesList(); updateCommunitySelect(); }
-            switchView('community', newComm.id);
-        };
-        document.getElementById('cancelNewCommunityBtn').onclick = () => { document.getElementById('createCommunityModal').style.display = 'none'; };
-
-        function renderCommunityPage(id) {
-            const comm = allCommunities.find(c => String(c.id) === String(id));
-            if (!comm) return;
-
-            document.getElementById('commProfileCover').src = comm.cover;
-            document.getElementById('commProfileAvatar').src = comm.avatar;
-            document.getElementById('commProfileName').innerText = comm.name;
-            document.getElementById('commProfileDesc').innerText = comm.description || 'Без описания';
-
-            const commPosts = allPosts.filter(p => String(p.communityId) === String(id) && (!p.expiresAt || p.expiresAt > Date.now()) && p.authorAvatar);
-            document.getElementById('commStatPosts').innerText = commPosts.length;
-
-            const editBtn = document.getElementById('editCommunityBtn');
-            if (comm.creatorEmail === currentUser.email) {
-                editBtn.style.display = 'block';
-                editBtn.onclick = () => openCommunitySettings(id);
-            } else {
-                editBtn.style.display = 'none';
-            }
-
-            const container = document.getElementById('communityPostsContainer');
-            container.innerHTML = '';
-            if (commPosts.length === 0) container.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding: 20px;">В сообществе пока нет записей.</p>';
-            
-            commPosts.sort((a,b) => b.timestamp - a.timestamp).forEach(post => {
-                container.innerHTML += generatePostHTML(post);
-            });
-        }
-
-        function openCommunitySettings(id) {
-            const comm = allCommunities.find(c => String(c.id) === String(id));
-            if (!comm) return;
-            
-            document.getElementById('editCommName').value = comm.name;
-            document.getElementById('editCommDesc').value = comm.description || '';
-            tempEditCommCoverBase64 = null; tempEditCommAvatarBase64 = null;
-            document.getElementById('editCommCoverLabel').innerText = 'Выбрать фото';
-            document.getElementById('editCommAvatarLabel').innerText = 'Выбрать фото';
-            
-            document.getElementById('settingsCommunityModal').style.display = 'flex';
-
-            document.getElementById('editCommCoverUpload').onchange = function(e) {
-                const file = e.target.files[0];
-                if (file) { const r = new FileReader(); r.onload = (ev) => { tempEditCommCoverBase64 = ev.target.result; document.getElementById('editCommCoverLabel').innerText = 'Фото выбрано ✓'; }; r.readAsDataURL(file); }
-            };
-            document.getElementById('editCommAvatarUpload').onchange = function(e) {
-                const file = e.target.files[0];
-                if (file) { const r = new FileReader(); r.onload = (ev) => { tempEditCommAvatarBase64 = ev.target.result; document.getElementById('editCommAvatarLabel').innerText = 'Фото выбрано ✓'; }; r.readAsDataURL(file); }
-            };
-
-            document.getElementById('saveCommSettingsBtn').onclick = () => {
-                const newName = document.getElementById('editCommName').value.trim();
-                if (!newName) return alert('Название не может быть пустым');
-                
-                comm.name = newName;
-                comm.description = document.getElementById('editCommDesc').value.trim();
-                if (tempEditCommCoverBase64) comm.cover = tempEditCommCoverBase64;
-                if (tempEditCommAvatarBase64) comm.avatar = tempEditCommAvatarBase64;
-
-                saveToDB('communities/' + comm.id, comm);
-                document.getElementById('settingsCommunityModal').style.display = 'none';
-                renderCommunityPage(comm.id);
-                if (!isFirebaseConfigured) { renderCommunitiesList(); updateCommunitySelect(); }
-            };
-
-            document.getElementById('deleteCommunityBtn').onclick = () => {
-                if(confirm('Удалить сообщество? Все посты внутри также будут удалены.')) {
-                    deleteFromDB('communities', comm.id);
-                    allPosts.filter(p => String(p.communityId) === String(comm.id)).forEach(p => deleteFromDB('posts', p.id));
-                    document.getElementById('settingsCommunityModal').style.display = 'none';
-                    switchView('communities');
-                }
-            };
-        }
-        document.getElementById('cancelCommSettingsBtn').onclick = () => document.getElementById('settingsCommunityModal').style.display = 'none';
-
-        // ==========================================
-        // ЛЕНТА И ПОСТЫ
-        // ==========================================
-        function generatePostHTML(post) {
-            const isLiked = post.likedBy && post.likedBy.includes(currentUser.email);
-            const comments = (post.comments || []).filter(c => c.authorAvatar);
-            
-            let deleteBtnHTML = post.authorEmail === currentUser.email 
-                ? `<button class="delete-post-btn" onclick="event.stopPropagation(); deletePost('${post.id}', ${!!post.communityId})" title="Удалить"><i class="fas fa-trash-alt"></i></button>` : '';
-            
-            let expiryHTML = post.expiresAt ? ` <i class="fas fa-clock" title="Временный пост" style="font-size: 12px; color: var(--brand-solid);"></i>` : '';
-
-            let contextHTML = '';
-            if (post.communityId) {
-                const comm = allCommunities.find(c => String(c.id) === String(post.communityId));
-                if (comm) {
-                    contextHTML = `<span> в <b onclick="event.stopPropagation(); switchView('community', '${comm.id}')" style="cursor:pointer; color:var(--brand-solid);">${comm.name}</b></span>`;
-                }
-            }
-
-            return `
-                <div class="post">
-                    <div class="post-header">
-                        <div class="post-user" onclick="switchView('profile', '${post.authorEmail}')">
-                            <img src="${post.authorAvatar}" alt="User">
-                            <div class="post-info">
-                                <h4>${post.authorName}${expiryHTML}</h4>
-                                <span>Недавно${contextHTML}</span>
-                            </div>
-                        </div>
-                        <div class="post-options">
-                            ${deleteBtnHTML}
-                            <i class="fas fa-ellipsis-h" style="color: var(--text-muted); cursor: pointer;"></i>
-                        </div>
-                    </div>
-                    ${post.text ? `<div class="post-content"><p>${post.text}</p></div>` : ''}
-                    ${post.image ? `<img src="${post.image}" alt="Post Image" class="post-image">` : ''}
-                    
-                    <div class="post-footer">
-                        <button class="action-btn like-btn ${isLiked ? 'liked' : ''}" onclick="toggleLike('${post.id}', ${!!post.communityId})">
-                            <i class="${isLiked ? 'fas' : 'far'} fa-heart"></i> <span class="like-count">${post.likes}</span>
-                        </button>
-                        <button class="action-btn" onclick="toggleComments('${post.id}')">
-                            <i class="far fa-comment"></i> <span>${comments.length}</span>
-                        </button>
-                    </div>
-
-                    <div class="comments-section" id="comments-${post.id}" style="display: ${openComments.includes(String(post.id)) ? 'block' : 'none'};">
-                        <div class="comments-list">
-                            ${comments.length === 0 ? '<p style="font-size: 12px; color: var(--text-muted); text-align: center;">Нет комментариев</p>' : 
-                                comments.map(c => `
-                                <div class="comment-item">
-                                    <img src="${c.authorAvatar}" alt="User">
-                                    <div class="comment-content">
-                                        <div class="comment-author" onclick="switchView('profile', '${c.authorEmail}')">${c.authorName}</div>
-                                        <div class="comment-text">${c.text}</div>
-                                    </div>
-                                </div>`).join('')}
-                        </div>
-                        <div class="comment-input-area">
-                            <img src="${currentUser.avatar}" alt="You">
-                            <input type="text" id="comment-input-${post.id}" placeholder="Комментарий..." onkeypress="handleCommentEnter(event, '${post.id}')">
-                            <button onclick="addComment('${post.id}')"><i class="fas fa-paper-plane"></i></button>
-                        </div>
-                    </div>
-                </div>`;
-        }
-
-        function renderFeed() {
-            const container = document.getElementById('postsContainer');
-            container.innerHTML = '';
-            const now = Date.now();
-            const activePosts = allPosts.filter(p => !p.communityId && (!p.expiresAt || p.expiresAt > now) && p.authorAvatar).sort((a, b) => b.timestamp - a.timestamp);
-            activePosts.forEach(post => { container.innerHTML += generatePostHTML(post); });
-        }
-
-        function renderCommunityFeed() {
-            if (currentCommunityViewId) renderCommunityPage(currentCommunityViewId);
-        }
-
-        window.deletePost = (postId, isCommunity) => {
-            if(confirm('Удалить пост?')) {
-                deleteFromDB('posts', postId);
-                if (isCommunity) renderCommunityFeed();
-                else renderFeed();
-            }
-        };
-
-        window.toggleComments = (postId) => {
-            const section = document.getElementById(`comments-${postId}`);
-            if (section.style.display === 'none') {
-                section.style.display = 'block';
-                if (!openComments.includes(String(postId))) openComments.push(String(postId));
-                document.getElementById(`comment-input-${postId}`).focus();
-            } else {
-                section.style.display = 'none';
-                openComments = openComments.filter(id => id !== String(postId));
-            }
-        };
-
-        window.handleCommentEnter = (event, postId) => {
-            if (event.key === 'Enter') { event.preventDefault(); addComment(postId); }
-        };
-
-        window.addComment = (postId) => {
-            const input = document.getElementById(`comment-input-${postId}`);
-            const text = input.value.trim();
-            if (!text) return;
-
-            const post = allPosts.find(p => String(p.id) === String(postId));
-            if (!post) return;
-
-            if (!post.comments) post.comments = [];
-            post.comments.push({
-                id: Date.now().toString(), authorName: currentUser.name,
-                authorEmail: currentUser.email, authorAvatar: currentUser.avatar, text: text
-            });
-
-            saveToDB('posts/' + post.id, post);
-            input.value = '';
-            if (!isFirebaseConfigured) renderFeed();
-        };
-
-        window.toggleLike = (postId, isCommunity) => {
-            const post = allPosts.find(p => String(p.id) === String(postId));
-            if (!post) return;
-
-            if (!post.likedBy) post.likedBy = [];
-            const idx = post.likedBy.indexOf(currentUser.email);
-            if (idx > -1) { post.likedBy.splice(idx, 1); post.likes--; }
-            else { post.likedBy.push(currentUser.email); post.likes++; }
-            
-            saveToDB('posts/' + post.id, post);
-            if (!isFirebaseConfigured) {
-                if (isCommunity) renderCommunityFeed(); else renderFeed();
-            }
-        };
-
-        // ==========================================
-        // ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ
-        // ==========================================
-        async function renderProfile(email) {
-            currentProfileViewEmail = email;
-            const user = await getUserFromDB(email);
-            if (!user) return;
-
-            document.getElementById('profileAvatar').src = user.avatar;
-            document.getElementById('profileName').innerText = user.name;
-            document.getElementById('profileEmail').innerText = user.email;
-            document.getElementById('profileCoverImg').src = user.cover || 'https://dummyimage.com/1000x300/cccccc/ffffff&text=Cover';
-            
-            const editBtn = document.getElementById('editProfileBtn');
-            const msgBtn = document.getElementById('messageUserBtn');
-            
-            if (email === currentUser.email) { 
-                editBtn.style.display = 'block'; 
-                msgBtn.style.display = 'none';
-                document.getElementById('profilePostsTitle').innerText = 'Мои публикации'; 
-            }
-            else { 
-                editBtn.style.display = 'none'; 
-                msgBtn.style.display = 'block';
-                document.getElementById('profilePostsTitle').innerText = `Публикации ${user.name}`; 
-            }
-
-            const now = Date.now();
-            const userPosts = allPosts.filter(p => p.authorEmail === email && (!p.expiresAt || p.expiresAt > now) && p.authorAvatar).sort((a,b) => b.timestamp - a.timestamp);
-            document.getElementById('statPosts').innerText = userPosts.length;
-            
-            const grid = document.getElementById('myPostsGrid');
-            grid.innerHTML = userPosts.length === 0 ? '<p style="color:var(--text-muted); padding:10px;">Нет публикаций.</p>' : '';
-            
-            userPosts.forEach(post => {
-                if (post.image) grid.innerHTML += `<div class="post" onclick="switchView('home')"><img src="${post.image}" class="post-image"></div>`;
-                else grid.innerHTML += `<div class="post text-only-post" onclick="switchView('home')">${post.text}</div>`;
-            });
-        }
-
-        // ==========================================
-        // СОЗДАНИЕ ПОСТА
-        // ==========================================
-        document.getElementById('imageUpload').onchange = function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (ev) => { currentPostImageBase64 = ev.target.result; document.getElementById('imagePreview').src = currentPostImageBase64; document.getElementById('imagePreviewContainer').style.display = 'block'; };
-                reader.readAsDataURL(file);
-            }
-        };
-        document.getElementById('removeImageBtn').onclick = () => { currentPostImageBase64 = null; document.getElementById('imageUpload').value = ''; document.getElementById('imagePreviewContainer').style.display = 'none'; };
-
-        document.getElementById('submitPost').onclick = () => {
-            const text = document.getElementById('postInput').value.trim();
-            const expiryInput = document.getElementById('postExpiry').value;
-            const commId = document.getElementById('postCommunitySelect').value;
-            
-            if (text === '' && !currentPostImageBase64) return alert('Добавьте текст или фото!');
-
-            const newPost = {
-                id: Date.now().toString(),
-                authorName: currentUser.name,
-                authorAvatar: currentUser.avatar,
-                authorEmail: currentUser.email,
-                text: text,
-                image: currentPostImageBase64,
-                likes: 0, likedBy: [], comments: [], timestamp: Date.now(),
-                communityId: commId || null
-            };
-
-            if (expiryInput && parseInt(expiryInput) > 0) newPost.expiresAt = Date.now() + (parseInt(expiryInput) * 1000);
-
-            saveToDB('posts/' + newPost.id, newPost);
-            
-            document.getElementById('postInput').value = '';
-            document.getElementById('postExpiry').value = '';
-            document.getElementById('postCommunitySelect').value = '';
-            document.getElementById('removeImageBtn').click();
-            
-            if (!isFirebaseConfigured) { renderFeed(); if(commId) renderCommunityPage(commId); }
-            if (commId) switchView('community', commId);
-        };
-
-        // ==========================================
-        // РЕДАКТИРОВАНИЕ ПРОФИЛЯ
-        // ==========================================
-        document.getElementById('editProfileBtn').onclick = () => {
-            document.getElementById('editName').value = currentUser.name;
-            tempCoverBase64 = null; tempAvatarBase64 = null;
-            document.getElementById('coverLabel').innerText = 'Выбрать фото'; document.getElementById('avatarLabel').innerText = 'Выбрать фото';
-            document.getElementById('editModal').style.display = 'flex';
-        };
-        document.getElementById('cancelEditBtn').onclick = () => document.getElementById('editModal').style.display = 'none';
-
-        document.getElementById('coverUpload').onchange = function(e) {
-            const file = e.target.files[0];
-            if (file) { const r = new FileReader(); r.onload = (ev) => { tempCoverBase64 = ev.target.result; document.getElementById('coverLabel').innerText = 'Фото выбрано ✓'; }; r.readAsDataURL(file); }
-        };
-        document.getElementById('avatarUpload').onchange = function(e) {
-            const file = e.target.files[0];
-            if (file) { const r = new FileReader(); r.onload = (ev) => { tempAvatarBase64 = ev.target.result; document.getElementById('avatarLabel').innerText = 'Фото выбрано ✓'; }; r.readAsDataURL(file); }
-        };
-
-        document.getElementById('saveProfileBtn').onclick = async () => {
-            const newName = document.getElementById('editName').value.trim();
-            if (!newName) return alert('Имя не может быть пустым');
-
-            const oldEmail = currentUser.email;
-            currentUser.name = newName;
-            if (tempCoverBase64) currentUser.cover = tempCoverBase64;
-            if (tempAvatarBase64) currentUser.avatar = tempAvatarBase64;
-
-            saveToDB('users/' + oldEmail.replace(/\./g, '_'), currentUser);
-            localStorage.setItem('diferlink_current_user', JSON.stringify(currentUser));
-
-            allPosts.forEach(post => {
-                let updated = false;
-                if (post.authorEmail === oldEmail) { post.authorName = currentUser.name; post.authorAvatar = currentUser.avatar; updated = true; }
-                if (post.comments) post.comments.forEach(c => { if (c.authorEmail === oldEmail) { c.authorName = currentUser.name; c.authorAvatar = currentUser.avatar; updated = true; } });
-                if (updated) saveToDB('posts/' + post.id, post);
-            });
-            allStories.forEach(s => { if (s.authorEmail === oldEmail) { s.authorName = currentUser.name; s.authorAvatar = currentUser.avatar; saveToDB('stories/' + s.id, s); } });
-            allMessages.forEach(m => { 
-                if (m.senderEmail === oldEmail) { m.senderName = currentUser.name; m.senderAvatar = currentUser.avatar; saveToDB('messages/' + m.id, m); }
-            });
-
-            document.getElementById('headerAvatar').src = currentUser.avatar;
-            document.getElementById('createPostAvatar').src = currentUser.avatar;
-            document.getElementById('editModal').style.display = 'none';
-            
-            renderProfile(currentUser.email); renderFeed(); renderStories();
-        };
-
-        window.addEventListener('resize', () => {
-            if (document.getElementById('mainContainer').style.display !== 'none') {
-                document.getElementById('bottomNav').style.display = window.innerWidth <= 768 ? 'flex' : 'none';
-            }
-        });
-
-        const savedUser = JSON.parse(localStorage.getItem('diferlink_current_user'));
-        if (savedUser) loginUser(savedUser);
-        else document.getElementById('authModal').style.display = 'flex';
-    </script>
-</body>
-</html>
+            if
