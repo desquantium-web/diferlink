@@ -1475,7 +1475,15 @@ document.getElementById('imageViewerModal').style.display='flex';
 }
 function closeImageViewer(){document.getElementById('imageViewerModal').style.display='none';}
 
-const iceServers={iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}]};
+// ================= ЗВОНКИ (с исправлениями) =================
+const iceServers = {
+  iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' }
+  ]
+};
 
 function listenForIncomingCalls(){
 if(!isFirebaseConfigured)return;
@@ -1520,9 +1528,17 @@ currentCall={callId,role:'caller',peer:currentChatUser};
 document.getElementById('callPeerAvatar').src=currentChatUser.avatar;
 document.getElementById('callPeerName').innerText=currentChatUser.name;
 pc=new RTCPeerConnection(iceServers);
+// отладка
+pc.oniceconnectionstatechange = () => { console.log('ICE state:', pc.iceConnectionState); };
+pc.onconnectionstatechange = () => { console.log('Connection state:', pc.connectionState); };
 localStream.getTracks().forEach(t=>pc.addTrack(t,localStream));
 pc.onicecandidate=e=>{if(e.candidate)db.ref(`calls/${callId}/callerCandidates`).push(e.candidate.toJSON());};
-pc.ontrack=e=>{document.getElementById('remoteAudio').srcObject=e.streams[0];};
+pc.ontrack = e => {
+  const remoteStream = e.streams[0] || new MediaStream([e.track]);
+  const audioEl = document.getElementById('remoteAudio');
+  audioEl.srcObject = remoteStream;
+  audioEl.play().catch(err => console.log('Ошибка воспроизведения:', err));
+};
 const offer=await pc.createOffer();
 await pc.setLocalDescription(offer);
 await db.ref(`calls/${callId}`).set({
@@ -1535,7 +1551,7 @@ answerListener.on('value',async snap=>{
 const ans=snap.val();
 if(ans&&pc&&!pc.currentRemoteDescription){
 await pc.setRemoteDescription(new RTCSessionDescription(ans));
-flushIceCandidates('receiver');
+flushIceCandidates('caller'); // ИСПРАВЛЕНО: было 'receiver'
 showCallModal('active');
 }
 });
@@ -1572,9 +1588,17 @@ const callId=currentCall.callId;
 try{localStream=await navigator.mediaDevices.getUserMedia({audio:true});}
 catch(e){alert('Микрофон недоступен');declineCall();return;}
 pc=new RTCPeerConnection(iceServers);
+// отладка
+pc.oniceconnectionstatechange = () => { console.log('ICE state:', pc.iceConnectionState); };
+pc.onconnectionstatechange = () => { console.log('Connection state:', pc.connectionState); };
 localStream.getTracks().forEach(t=>pc.addTrack(t,localStream));
 pc.onicecandidate=e=>{if(e.candidate)db.ref(`calls/${callId}/receiverCandidates`).push(e.candidate.toJSON());};
-pc.ontrack=e=>{document.getElementById('remoteAudio').srcObject=e.streams[0];};
+pc.ontrack = e => {
+  const remoteStream = e.streams[0] || new MediaStream([e.track]);
+  const audioEl = document.getElementById('remoteAudio');
+  audioEl.srcObject = remoteStream;
+  audioEl.play().catch(err => console.log('Ошибка воспроизведения:', err));
+};
 const offerSnap=await db.ref(`calls/${callId}/offer`).once('value');
 const offer=offerSnap.val();
 if(!offer){cleanupCall();return;}
