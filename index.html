@@ -1148,4 +1148,611 @@ c.innerHTML=`<div class="profile-grid">${h}</div>`;
 }else if(currentProfileTab==='music'){
 const posts=allPosts.filter(p=>p.authorEmail===email&&p.media&&p.media.some(m=>m.type==='audio'));
 if(posts.length===0){c.innerHTML='<p style="color:var(--text-muted);padding:20px;text-align:center">Музыки нет.</p>';return;}
-let h='';posts.forEach(p=>{p.media.filter(m=>m.type==='audio').forEach(m=>{h+=`<div class="post" style="
+let h='';posts.forEach(p=>{p.media.filter(m=>m.type==='audio').forEach(m=>{h+=`<div class="post" style="padding:15px"><audio controls src="${m.data}" style="width:100%"></audio></div>`;});});
+c.innerHTML=h;
+}else if(currentProfileTab==='polls'){
+const posts=allPosts.filter(p=>p.authorEmail===email&&p.poll);
+if(posts.length===0){c.innerHTML='<p style="color:var(--text-muted);padding:20px;text-align:center">Опросов нет.</p>';return;}
+let h='';posts.forEach(p=>{h+=`<div class="post" style="padding:15px"><div style="font-weight:600;margin-bottom:10px">${p.poll.question}</div>${p.poll.options.map(o=>`<div style="padding:8px;background:var(--bg-color);border-radius:6px;margin-bottom:5px;font-size:14px">${o.text} — ${o.votes?o.votes.length:0} голосов</div>`).join('')}</div>`;});
+c.innerHTML=h;
+}
+}
+
+function openSettingsModal(){
+if(!currentUser)return;
+document.getElementById('settingsNickname').value=currentUser.name||'';
+document.getElementById('settingsBirthDate').value=currentUser.birthDate||'';
+document.getElementById('settingsBio').value=currentUser.bio||'';
+document.getElementById('settingsPrivacy').value=currentUser.privacy||'public';
+const sc=document.getElementById('steamCodeSection');
+if(currentUser.steamCode){sc.innerHTML=`<div style="display:flex;gap:10px;align-items:center"><input type="text" value="${currentUser.steamCode}" disabled style="flex:1"><button class="btn-small btn-small-danger" onclick="removeSteamCode()"><i class="fas fa-trash"></i> Удалить</button></div>`;}
+else{sc.innerHTML=`<div style="display:flex;gap:10px"><input type="text" id="steamCodeInput" placeholder="Введите код дружбы Steam" style="flex:1"><button class="btn-small btn-small-primary" onclick="saveSteamCode()"><i class="fas fa-plus"></i> Добавить</button></div>`;}
+const dti=document.getElementById('deletionTimerInfo');
+if(currentUser.deletionRequestedAt){
+const elapsed=Date.now()-currentUser.deletionRequestedAt;
+const rem=Math.max(0,3*60*60*1000-elapsed);
+if(rem>0){
+const h=Math.floor(rem/3600000);const m=Math.floor((rem%3600000)/60000);
+dti.style.display='block';dti.innerHTML=`⚠️ Профиль будет удалён через ${h}ч ${m}мин.<br><button class="btn-small btn-small-secondary" style="margin-top:5px" onclick="cancelDeletion()">Отменить</button>`;
+}else{performAccountDeletion();}
+}else dti.style.display='none';
+document.getElementById('settingsModal').style.display='flex';
+}
+function saveSteamCode(){const v=document.getElementById('steamCodeInput').value.trim();if(!v)return alert('Введите код');currentUser.steamCode=v;saveToDB('users/'+currentUser.email.replace(/\./g,'_'),currentUser);localStorage.setItem('diferlink_current_user',JSON.stringify(currentUser));openSettingsModal();}
+function removeSteamCode(){if(!confirm('Удалить код?'))return;currentUser.steamCode='';saveToDB('users/'+currentUser.email.replace(/\./g,'_'),currentUser);localStorage.setItem('diferlink_current_user',JSON.stringify(currentUser));openSettingsModal();}
+document.getElementById('saveSettingsBtn').onclick=()=>{
+const n=document.getElementById('settingsNickname').value.trim();
+if(!n)return alert('Никнейм пустой');
+currentUser.name=n;
+currentUser.birthDate=document.getElementById('settingsBirthDate').value;
+currentUser.bio=document.getElementById('settingsBio').value.trim();
+currentUser.privacy=document.getElementById('settingsPrivacy').value;
+saveToDB('users/'+currentUser.email.replace(/\./g,'_'),currentUser);
+localStorage.setItem('diferlink_current_user',JSON.stringify(currentUser));
+allPosts.forEach(p=>{let u=false;if(p.authorEmail===currentUser.email){p.authorName=currentUser.name;u=true;}if(p.comments)p.comments.forEach(c=>{if(c.authorEmail===currentUser.email){c.authorName=currentUser.name;u=true;}});if(u)saveToDB('posts/'+p.id,p);});
+allStories.forEach(s=>{if(s.authorEmail===currentUser.email){s.authorName=currentUser.name;saveToDB('stories/'+s.id,s);}});
+document.getElementById('headerAvatar').src=currentUser.avatar;
+document.getElementById('createPostAvatar').src=currentUser.avatar;
+document.getElementById('settingsModal').style.display='none';
+if(currentProfileViewEmail===currentUser.email)renderProfile(currentUser.email);
+showToast('Настройки сохранены');
+};
+document.getElementById('cancelSettingsBtn').onclick=()=>{document.getElementById('settingsModal').style.display='none';};
+document.getElementById('deleteProfileBtn').onclick=()=>{
+if(!confirm('Профиль будет удалён через 3 часа. Отменить можно в настройках.'))return;
+currentUser.deletionRequestedAt=Date.now();
+saveToDB('users/'+currentUser.email.replace(/\./g,'_'),currentUser);
+localStorage.setItem('diferlink_current_user',JSON.stringify(currentUser));
+openSettingsModal();
+};
+function cancelDeletion(){currentUser.deletionRequestedAt=null;saveToDB('users/'+currentUser.email.replace(/\./g,'_'),currentUser);localStorage.setItem('diferlink_current_user',JSON.stringify(currentUser));openSettingsModal();}
+setInterval(()=>{if(currentUser&&currentUser.deletionRequestedAt){if(Date.now()-currentUser.deletionRequestedAt>=3*60*60*1000)performAccountDeletion();}},60000);
+
+document.getElementById('coverUpload').onchange=function(e){const f=e.target.files[0];if(f){const r=new FileReader();r.onload=(ev)=>{tempCoverBase64=ev.target.result;document.getElementById('coverLabel').innerText='Фото выбрано ✓';};r.readAsDataURL(f);}};
+document.getElementById('avatarUpload').onchange=function(e){const f=e.target.files[0];if(f){const r=new FileReader();r.onload=(ev)=>{tempAvatarBase64=ev.target.result;document.getElementById('avatarLabel').innerText='Фото выбрано ✓';};r.readAsDataURL(f);}};
+document.getElementById('cancelEditBtn').onclick=()=>{document.getElementById('editModal').style.display='none';tempCoverBase64=null;tempAvatarBase64=null;document.getElementById('coverUpload').value='';document.getElementById('avatarUpload').value='';document.getElementById('coverLabel').innerText='Выбрать фото';document.getElementById('avatarLabel').innerText='Выбрать фото';};
+document.getElementById('saveProfileBtn').onclick=async()=>{
+if(tempCoverBase64)currentUser.cover=tempCoverBase64;
+if(tempAvatarBase64)currentUser.avatar=tempAvatarBase64;
+saveToDB('users/'+currentUser.email.replace(/\./g,'_'),currentUser);
+localStorage.setItem('diferlink_current_user',JSON.stringify(currentUser));
+allPosts.forEach(p=>{if(p.authorEmail===currentUser.email){p.authorAvatar=currentUser.avatar;saveToDB('posts/'+p.id,p);}});
+allStories.forEach(s=>{if(s.authorEmail===currentUser.email){s.authorAvatar=currentUser.avatar;saveToDB('stories/'+s.id,s);}});
+document.getElementById('headerAvatar').src=currentUser.avatar;
+document.getElementById('createPostAvatar').src=currentUser.avatar;
+document.getElementById('editModal').style.display='none';
+tempCoverBase64=null;tempAvatarBase64=null;
+renderProfile(currentUser.email);renderFeed();renderStories();
+};
+
+function updateCommunitySelect(){const s=document.getElementById('postCommunitySelect');s.innerHTML='<option value="">В ленту</option>';allCommunities.forEach(c=>s.innerHTML+=`<option value="${c.id}">${c.name}</option>`);}
+function renderCommunitiesList(){
+const g=document.getElementById('communitiesGrid');g.innerHTML='';
+if(allCommunities.length===0){g.innerHTML='<p style="color:var(--text-muted);grid-column:1/-1;text-align:center">Нет сообществ.</p>';return;}
+[...allCommunities].sort((a,b)=>b.timestamp-a.timestamp).forEach(c=>{g.innerHTML+=`<div class="community-card" onclick="switchView('community','${c.id}')"><img src="${c.cover||'https://dummyimage.com/500x200/007bff/ffffff&text='+encodeURIComponent(c.name)}" class="community-card-cover"><div class="community-card-info"><img src="${c.avatar||'https://ui-avatars.com/api/?name='+encodeURIComponent(c.name)+'&background=f0f2f5&color=333'}" class="community-card-avatar"><div><h3>${c.name}</h3><p>${c.description?(c.description.substring(0,40)+(c.description.length>40?'...':'')):'Без описания'}</p></div></div></div>`;});
+}
+document.getElementById('commCoverUpload').onchange=function(e){const f=e.target.files[0];if(f){const r=new FileReader();r.onload=(ev)=>{tempCommCoverBase64=ev.target.result;document.getElementById('commCoverLabel').innerText='Фото выбрано ✓';};r.readAsDataURL(f);}};
+document.getElementById('commAvatarUpload').onchange=function(e){const f=e.target.files[0];if(f){const r=new FileReader();r.onload=(ev)=>{tempCommAvatarBase64=ev.target.result;document.getElementById('commAvatarLabel').innerText='Фото выбрано ✓';};r.readAsDataURL(f);}};
+document.getElementById('cancelNewCommunityBtn').onclick=()=>{document.getElementById('createCommunityModal').style.display='none';tempCommCoverBase64=null;tempCommAvatarBase64=null;document.getElementById('commName').value='';document.getElementById('commDesc').value='';document.getElementById('commCoverLabel').innerText='Выбрать';document.getElementById('commAvatarLabel').innerText='Выбрать';};
+document.getElementById('saveNewCommunityBtn').onclick=()=>{
+const n=document.getElementById('commName').value.trim();const d=document.getElementById('commDesc').value.trim();
+if(!n)return alert('Введите название');
+const c={id:generateUniqueId(),name:n,description:d,avatar:tempCommAvatarBase64||`https://ui-avatars.com/api/?name=${encodeURIComponent(n)}&background=007bff&color=fff`,cover:tempCommCoverBase64||`https://dummyimage.com/1000x300/007bff/ffffff&text=${encodeURIComponent(n)}`,creatorEmail:currentUser.email,timestamp:Date.now()};
+saveToDB('communities/'+c.id,c);
+tempCommCoverBase64=null;tempCommAvatarBase64=null;
+document.getElementById('commName').value='';document.getElementById('commDesc').value='';
+document.getElementById('commCoverLabel').innerText='Выбрать';document.getElementById('commAvatarLabel').innerText='Выбрать';
+document.getElementById('createCommunityModal').style.display='none';
+if(!isFirebaseConfigured){renderCommunitiesList();updateCommunitySelect();}
+switchView('community',c.id);
+};
+function renderCommunityPage(id){
+const comm=allCommunities.find(c=>String(c.id)===String(id));if(!comm)return;
+document.getElementById('commProfileCover').src=comm.cover;
+document.getElementById('commProfileAvatar').src=comm.avatar;
+document.getElementById('commProfileName').innerText=comm.name;
+document.getElementById('commProfileDesc').innerText=comm.description||'Без описания';
+const posts=allPosts.filter(p=>String(p.communityId)===String(id)&&(!p.expiresAt||p.expiresAt>Date.now())&&p.authorAvatar);
+document.getElementById('commStatPosts').innerText=posts.length;
+const eb=document.getElementById('editCommunityBtn');
+if(comm.creatorEmail===currentUser.email){eb.style.display='flex';eb.onclick=()=>openCommunitySettings(id);}
+else eb.style.display='none';
+const c=document.getElementById('communityPostsContainer');c.innerHTML='';
+if(posts.length===0)c.innerHTML='<p style="color:var(--text-muted);text-align:center;padding:20px">Нет записей.</p>';
+posts.sort((a,b)=>b.timestamp-a.timestamp).forEach(p=>c.innerHTML+=generatePostHTML(p));
+}
+function openCommunitySettings(id){
+const comm=allCommunities.find(c=>String(c.id)===String(id));if(!comm)return;
+if(comm.creatorEmail!==currentUser.email){alert('Только создатель');return;}
+currentSettingsCommunity=comm;
+document.getElementById('editCommName').value=comm.name;
+document.getElementById('editCommDesc').value=comm.description||'';
+tempEditCommCoverBase64=null;tempEditCommAvatarBase64=null;
+document.getElementById('editCommCoverLabel').innerText='Выбрать';
+document.getElementById('editCommAvatarLabel').innerText='Выбрать';
+document.getElementById('editCommCoverUpload').value='';document.getElementById('editCommAvatarUpload').value='';
+document.getElementById('settingsCommunityModal').style.display='flex';
+document.getElementById('editCommCoverUpload').onchange=function(e){const f=e.target.files[0];if(f){const r=new FileReader();r.onload=(ev)=>{tempEditCommCoverBase64=ev.target.result;document.getElementById('editCommCoverLabel').innerText='Фото выбрано ✓';};r.readAsDataURL(f);}};
+document.getElementById('editCommAvatarUpload').onchange=function(e){const f=e.target.files[0];if(f){const r=new FileReader();r.onload=(ev)=>{tempEditCommAvatarBase64=ev.target.result;document.getElementById('editCommAvatarLabel').innerText='Фото выбрано ✓';};r.readAsDataURL(f);}};
+document.getElementById('saveCommSettingsBtn').onclick=()=>{
+const n=document.getElementById('editCommName').value.trim();if(!n)return alert('Название');
+comm.name=n;comm.description=document.getElementById('editCommDesc').value.trim();
+if(tempEditCommCoverBase64)comm.cover=tempEditCommCoverBase64;
+if(tempEditCommAvatarBase64)comm.avatar=tempEditCommAvatarBase64;
+saveToDB('communities/'+comm.id,comm);
+document.getElementById('settingsCommunityModal').style.display='none';
+renderCommunityPage(comm.id);
+if(!isFirebaseConfigured){renderCommunitiesList();updateCommunitySelect();}
+showToast('Изменения сохранены');
+};
+document.getElementById('deleteCommunityBtn').onclick=()=>{document.getElementById('deleteCommNameDisplay').innerText=comm.name;document.getElementById('confirmDeleteCommunityModal').style.display='flex';};
+}
+document.getElementById('cancelDeleteCommunityBtn').onclick=()=>{document.getElementById('confirmDeleteCommunityModal').style.display='none';};
+document.getElementById('confirmDeleteCommunityBtn').onclick=async()=>{
+if(!currentSettingsCommunity)return;
+const comm=currentSettingsCommunity;
+const posts=allPosts.filter(p=>String(p.communityId)===String(comm.id));
+if(isFirebaseConfigured){const u={};posts.forEach(p=>{u['posts/'+p.id]=null;});u['communities/'+comm.id]=null;await db.ref().update(u);}
+else{let ps=JSON.parse(localStorage.getItem('diferlink_posts'))||[];ps=ps.filter(p=>String(p.communityId)!==String(comm.id));localStorage.setItem('diferlink_posts',JSON.stringify(ps));let cs=JSON.parse(localStorage.getItem('diferlink_communities'))||[];cs=cs.filter(c=>String(c.id)!==String(comm.id));localStorage.setItem('diferlink_communities',JSON.stringify(cs));initDataListeners();}
+document.getElementById('confirmDeleteCommunityModal').style.display='none';
+document.getElementById('settingsCommunityModal').style.display='none';
+currentSettingsCommunity=null;switchView('communities');
+};
+document.getElementById('cancelCommSettingsBtn').onclick=()=>{document.getElementById('settingsCommunityModal').style.display='none';tempEditCommCoverBase64=null;tempEditCommAvatarBase64=null;document.getElementById('editCommCoverUpload').value='';document.getElementById('editCommAvatarUpload').value='';document.getElementById('editCommCoverLabel').innerText='Выбрать';document.getElementById('editCommAvatarLabel').innerText='Выбрать';};
+
+function updateNotificationBadge(){const u=allNotifications.filter(n=>(n.toEmail||'').toLowerCase()===currentUser.email&&!n.read).length;const b=document.getElementById('notificationBadge');if(u>0){b.innerText=u;b.style.display='block';}else b.style.display='none';}
+function renderNotifications(){
+const c=document.getElementById('notificationsListContainer');c.innerHTML='';
+const notifs=allNotifications.filter(n=>(n.toEmail||'').toLowerCase()===currentUser.email).sort((a,b)=>b.timestamp-a.timestamp);
+if(notifs.length===0){c.innerHTML='<p style="text-align:center;color:var(--text-muted);padding:20px">Нет уведомлений.</p>';return;}
+const toRead=[];
+notifs.forEach(n=>{
+let a='';
+if(n.type==='friend_request'){const isP=allFriendRequests.some(r=>r.fromEmail.toLowerCase()===(n.fromEmail||'').toLowerCase()&&r.toEmail.toLowerCase()===currentUser.email&&r.status==='pending');if(isP)a=`<div class="notification-actions"><button class="btn-accept" onclick="acceptFriendRequest('${n.fromEmail}')">Принять</button><button class="btn-decline" onclick="declineFriendRequest('${n.fromEmail}')">Отклонить</button></div>`;}
+let t='';if(n.type==='friend_request')t=`<b>${n.fromName}</b> хочет добавить вас в друзья.`;if(n.type==='friend_accepted')t=`<b>${n.fromName}</b> принял(а) вашу заявку.`;
+c.innerHTML+=`<div class="notification-item"><img src="${n.fromAvatar}" onclick="switchView('profile','${n.fromEmail}')"><div class="notification-info"><div class="notification-text">${t}</div><div class="notification-time">${new Date(n.timestamp).toLocaleString()}</div>${a}</div></div>`;
+if(!n.read)toRead.push(n);
+});
+if(toRead.length>0)setTimeout(()=>{toRead.forEach(n=>{n.read=true;saveToDB('notifications/'+n.id,n);});},500);
+updateNotificationBadge();
+}
+
+async function renderMessagesList(){
+const c=document.getElementById('chatsListContainer');c.innerHTML='';
+let allChats={};
+if(isFirebaseConfigured){const s=await db.ref('chats').once('value');allChats=s.val()||{};}
+else{const a=JSON.parse(localStorage.getItem('diferlink_chats'))||[];a.forEach(x=>{allChats[x.id]=x;});}
+const list=[];
+Object.values(allChats).forEach(ch=>{
+if(!ch.participants||!ch.participants.includes(currentUser.email))return;
+let m=[];if(ch.messages)m=Array.isArray(ch.messages)?ch.messages:Object.values(ch.messages);
+if(m.length===0)return;list.push({...ch,lastMsg:m[m.length-1]});
+});
+list.sort((a,b)=>b.lastMsg.timestamp-a.lastMsg.timestamp);
+if(list.length===0){c.innerHTML='<p style="text-align:center;color:var(--text-muted);padding:20px;font-size:13px">Нет сообщений.</p>';return;}
+for(const ch of list){
+const p=ch.participants.find(e=>e!==currentUser.email);if(!p)continue;
+const u=allUsersData.find(x=>x.email===p)||await getUserFromDB(p);if(!u)continue;
+const isMine=ch.lastMsg.senderEmail===currentUser.email;
+let prev=ch.lastMsg.text||'';
+if(ch.lastMsg.type==='file')prev='📎 Файл';else if(ch.lastMsg.type==='audio')prev='🎵 Музыка';else if(ch.lastMsg.type==='poll')prev='📊 Опрос';
+if(isMine)prev='Вы: '+prev;
+const time=new Date(ch.lastMsg.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+const on=u.lastActive&&(Date.now()-u.lastActive<60000);
+const dot=on?'<div class="status-dot online"></div>':'<div class="status-dot offline"></div>';
+c.innerHTML+=`<div class="chat-preview" onclick="switchView('chat','${u.email}')"><img src="${u.avatar}"><div class="chat-preview-info"><div class="chat-preview-name">${u.name} ${dot}</div><div class="chat-preview-text">${prev}</div></div><div class="chat-preview-time">${time}</div></div>`;
+}
+}
+async function openChat(peerEmail){
+peerEmail=peerEmail.toLowerCase();
+if(peerEmail===currentUser.email){alert('Нельзя себе');switchView('messages');return;}
+if(currentChatListener){currentChatListener.off();currentChatListener=null;}
+if(peerStatusListener){peerStatusListener.off();peerStatusListener=null;}
+const u=allUsersData.find(x=>x.email.toLowerCase()===peerEmail)||await getUserFromDB(peerEmail);
+if(!u){alert('Не найден');switchView('messages');return;}
+currentChatUser=u;
+document.getElementById('chatReceiverAvatar').src=u.avatar;
+document.getElementById('chatReceiverName').innerText=u.name;
+if(isFirebaseConfigured){
+peerStatusListener=db.ref('users/'+peerEmail.replace(/\./g,'_'));
+peerStatusListener.on('value',s=>{
+const p=s.val();if(!p)return;
+const now=Date.now();
+const on=p.lastActive&&(now-p.lastActive<60000);
+const isTyping=p.typingTo===currentUser.email;
+let txt='',col='var(--text-muted)';
+if(isTyping){txt='печатает...';col='var(--brand-solid)';}
+else if(on){txt='в сети';col='#31a24c';}
+else if(p.lastActive){const m=Math.floor((now-p.lastActive)/60000);txt=m<60?`был(а) ${m} мин. назад`:'был(а) давно';}
+else txt='офлайн';
+document.getElementById('chatReceiverStatus').innerHTML=`<span style="color:${col}">${txt}</span>`;
+});
+}else{document.getElementById('chatReceiverStatus').innerText='в сети (локально)';}
+const chatId=getChatId(currentUser.email,peerEmail);
+currentChatMessages=[];
+document.getElementById('chatMessagesContainer').innerHTML='<p style="text-align:center;color:var(--text-muted);padding:20px">Загрузка...</p>';
+if(isFirebaseConfigured){
+currentChatListener=db.ref('chats/'+chatId+'/messages');
+currentChatListener.on('value',s=>{
+if(!s.exists())currentChatMessages=[];
+else currentChatMessages=Object.entries(s.val()).map(([k,v])=>({...v,pushId:k}));
+renderChatMessages();
+});
+}else{
+const a=JSON.parse(localStorage.getItem('diferlink_chats'))||[];
+const ch=a.find(x=>x.id===chatId);
+currentChatMessages=ch?[...ch.messages]:[];
+renderChatMessages();
+}
+document.getElementById('chatInput').focus();
+}
+function renderChatMessages(){
+const c=document.getElementById('chatMessagesContainer');c.innerHTML='';
+if(currentChatMessages.length===0){c.innerHTML='<p style="text-align:center;color:var(--text-muted);font-size:13px;margin-top:20px">Начните диалог!</p>';return;}
+currentChatMessages.forEach(m=>{c.innerHTML+=generateMessageHTML(m);});
+setTimeout(()=>{c.scrollTop=c.scrollHeight;},50);
+}
+function generateMessageHTML(msg){
+const isMine=msg.senderEmail===currentUser.email;
+const time=new Date(msg.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+const id=msg.pushId||msg.id;
+let content='';
+if(msg.type==='file')content=`<div class="msg-file"><i class="fas fa-file"></i><div class="msg-file-info"><div class="msg-file-name">${msg.fileName}</div><div class="msg-file-size">${formatFileSize(msg.fileSize)}</div></div><a href="${msg.fileData}" download="${msg.fileName}"><i class="fas fa-download"></i></a></div>`;
+else if(msg.type==='audio')content=`<div class="msg-audio"><div class="msg-audio-header"><i class="fas fa-music"></i><div class="msg-audio-name">${msg.fileName}</div></div><audio controls src="${msg.fileData}"></audio></div>`;
+else if(msg.type==='poll'){const total=msg.options.reduce((s,o)=>s+(o.votes?o.votes.length:0),0);content=`<div class="msg-poll"><div class="msg-poll-question">${msg.question}</div>${msg.options.map((o,i)=>{const v=o.votes?o.votes.length:0;const p=total>0?Math.round(v/total*100):0;const voted=o.votes&&o.votes.includes(currentUser.email);return `<div class="msg-poll-option ${voted?'voted':''}" onclick="votePoll('${id}',${i})"><div class="msg-poll-bar" style="width:${p}%"></div><span class="msg-poll-text">${o.text}</span><span class="msg-poll-percent">${p}%</span></div>`;}).join('')}<div class="msg-poll-total">Голосов: ${total}</div></div>`;}
+else content=msg.text;
+let acts='';
+if(isMine){const e=(!msg.type||msg.type==='text')?`<i class="fas fa-pen msg-action-icon" onclick="editMessage('${id}')"></i>`:'';acts=`<div class="msg-actions">${e}<i class="fas fa-trash msg-action-icon" onclick="deleteMessage('${id}')"></i></div>`;}
+const ed=msg.edited?'<span class="msg-edited">(изм.)</span>':'';
+const ck=isMine?'<i class="fas fa-check-double" style="font-size:10px;color:#53bdeb"></i>':'';
+return `<div class="msg-bubble ${isMine?'mine':'theirs'}">${content}${acts}<div style="display:flex;justify-content:flex-end;align-items:center;margin-top:5px;gap:3px">${ed}<span class="msg-time" style="position:static">${time}</span>${ck}</div></div>`;
+}
+function formatFileSize(b){if(b<1024)return b+' B';if(b<1024*1024)return(b/1024).toFixed(1)+' KB';return(b/(1024*1024)).toFixed(1)+' MB';}
+function sendMessage(){
+const input=document.getElementById('chatInput');
+const text=input.value.trim();
+if(!text||!currentChatUser)return;
+const chatId=getChatId(currentUser.email,currentChatUser.email);
+const msg={id:generateUniqueId(),senderEmail:currentUser.email,senderName:currentUser.name,senderAvatar:currentUser.avatar,receiverEmail:currentChatUser.email,type:'text',text,timestamp:Date.now(),edited:false};
+if(isFirebaseConfigured){db.ref('chats/'+chatId+'/messages').push(msg);db.ref('chats/'+chatId+'/participants').set([currentUser.email,currentChatUser.email].sort());}
+else{let a=JSON.parse(localStorage.getItem('diferlink_chats'))||[];let ch=a.find(x=>x.id===chatId);if(!ch){ch={id:chatId,participants:[currentUser.email,currentChatUser.email].sort(),messages:[]};a.push(ch);}ch.messages.push(msg);localStorage.setItem('diferlink_chats',JSON.stringify(a));currentChatMessages=[...ch.messages];renderChatMessages();}
+input.value='';
+if(isFirebaseConfigured&&currentChatUser){db.ref('users/'+currentUser.email.replace(/\./g,'_')).update({typingTo:null});clearTimeout(typingTimeout);}
+}
+function handleChatEnter(e){if(e.key==='Enter'){e.preventDefault();sendMessage();}}
+async function editMessage(id){
+if(!currentChatUser)return;
+const chatId=getChatId(currentUser.email,currentChatUser.email);
+let m=null;
+if(isFirebaseConfigured){const s=await db.ref('chats/'+chatId+'/messages/'+id).once('value');m=s.val();}
+else{const a=JSON.parse(localStorage.getItem('diferlink_chats'))||[];const ch=a.find(x=>x.id===chatId);if(ch)m=ch.messages.find(x=>String(x.id)===String(id));}
+if(!m||m.senderEmail!==currentUser.email||(m.type&&m.type!=='text'))return;
+const nt=prompt('Редактировать:',m.text||'');
+if(nt===null||nt.trim()===''||nt.trim()===m.text)return;
+if(isFirebaseConfigured)db.ref('chats/'+chatId+'/messages/'+id).update({text:nt.trim(),edited:true});
+else{let a=JSON.parse(localStorage.getItem('diferlink_chats'))||[];const ch=a.find(x=>x.id===chatId);if(!ch)return;const msg=ch.messages.find(x=>String(x.id)===String(id));if(!msg)return;msg.text=nt.trim();msg.edited=true;localStorage.setItem('diferlink_chats',JSON.stringify(a));currentChatMessages=[...ch.messages];renderChatMessages();}
+}
+async function deleteMessage(id){
+if(!currentChatUser||!confirm('Удалить?'))return;
+const chatId=getChatId(currentUser.email,currentChatUser.email);
+let m=null;
+if(isFirebaseConfigured){const s=await db.ref('chats/'+chatId+'/messages/'+id).once('value');m=s.val();}
+else{const a=JSON.parse(localStorage.getItem('diferlink_chats'))||[];const ch=a.find(x=>x.id===chatId);if(ch)m=ch.messages.find(x=>String(x.id)===String(id));}
+if(!m||m.senderEmail!==currentUser.email)return;
+if(isFirebaseConfigured)db.ref('chats/'+chatId+'/messages/'+id).remove();
+else{let a=JSON.parse(localStorage.getItem('diferlink_chats'))||[];const ch=a.find(x=>x.id===chatId);if(!ch)return;ch.messages=ch.messages.filter(x=>String(x.id)!==String(id));localStorage.setItem('diferlink_chats',JSON.stringify(a));currentChatMessages=[...ch.messages];renderChatMessages();}
+}
+async function clearChatFromProfile(peerEmail){
+if(!confirm(`Очистить переписку с ${peerEmail}?`))return;
+const chatId=getChatId(currentUser.email,peerEmail);
+if(isFirebaseConfigured)db.ref('chats/'+chatId+'/messages').remove();
+else{let a=JSON.parse(localStorage.getItem('diferlink_chats'))||[];const ch=a.find(x=>x.id===chatId);if(ch){ch.messages=[];localStorage.setItem('diferlink_chats',JSON.stringify(a));}}
+showToast('Переписка очищена');
+}
+function handleChatAvatarClick(){if(currentChatUser)switchView('profile',currentChatUser.email);}
+function toggleAttachMenu(e){if(e)e.stopPropagation();document.getElementById('attachMenu').classList.toggle('show');}
+document.addEventListener('click',e=>{const m=document.getElementById('attachMenu');if(m&&!m.contains(e.target)&&!e.target.closest('.attach-btn'))m.classList.remove('show');});
+function sendAttachment(data){
+if(!currentChatUser)return;
+const chatId=getChatId(currentUser.email,currentChatUser.email);
+const msg={id:generateUniqueId(),senderEmail:currentUser.email,senderName:currentUser.name,senderAvatar:currentUser.avatar,receiverEmail:currentChatUser.email,text:'',timestamp:Date.now(),...data};
+if(isFirebaseConfigured){db.ref('chats/'+chatId+'/messages').push(msg);db.ref('chats/'+chatId+'/participants').set([currentUser.email,currentChatUser.email].sort());}
+else{let a=JSON.parse(localStorage.getItem('diferlink_chats'))||[];let ch=a.find(x=>x.id===chatId);if(!ch){ch={id:chatId,participants:[currentUser.email,currentChatUser.email].sort(),messages:[]};a.push(ch);}ch.messages.push(msg);localStorage.setItem('diferlink_chats',JSON.stringify(a));currentChatMessages=[...ch.messages];renderChatMessages();}
+}
+function handleChatFile(e){const f=e.target.files[0];if(!f)return;if(f.size>2*1024*1024){alert('Макс 2 МБ');e.target.value='';return;}const r=new FileReader();r.onload=(ev)=>sendAttachment({type:'file',fileName:f.name,fileSize:f.size,fileData:ev.target.result});r.readAsDataURL(f);e.target.value='';}
+function handleChatAudio(e){const f=e.target.files[0];if(!f)return;if(f.size>2*1024*1024){alert('Макс 2 МБ');e.target.value='';return;}const r=new FileReader();r.onload=(ev)=>sendAttachment({type:'audio',fileName:f.name,fileSize:f.size,fileData:ev.target.result});r.readAsDataURL(f);e.target.value='';}
+function openPollModal(){
+document.getElementById('pollQuestion').value='';
+document.getElementById('pollOptionsContainer').innerHTML=`<div class="input-group"><label>Вариант 1</label><input type="text" class="poll-option-input"></div><div class="input-group"><label>Вариант 2</label><input type="text" class="poll-option-input"></div>`;
+pollOptionsCount=2;
+document.getElementById('submitPollBtn').onclick=()=>{
+const q=document.getElementById('pollQuestion').value.trim();if(!q)return alert('Введите вопрос');
+const opts=[];document.querySelectorAll('.poll-option-input').forEach(i=>{const t=i.value.trim();if(t)opts.push({text:t,votes:[]});});
+if(opts.length<2)return alert('Минимум 2');
+sendAttachment({type:'poll',question:q,options:opts});
+document.getElementById('createPollModal').style.display='none';
+};
+document.getElementById('createPollModal').style.display='flex';
+}
+async function votePoll(id,idx){
+if(!currentChatUser)return;
+const chatId=getChatId(currentUser.email,currentChatUser.email);
+if(isFirebaseConfigured){const ref=db.ref('chats/'+chatId+'/messages/'+id+'/options/'+idx+'/votes');const s=await ref.once('value');const v=s.val()||[];const i=v.indexOf(currentUser.email);if(i>-1)v.splice(i,1);else v.push(currentUser.email);ref.set(v);}
+else{let a=JSON.parse(localStorage.getItem('diferlink_chats'))||[];const ch=a.find(x=>x.id===chatId);if(!ch)return;const m=ch.messages.find(x=>String(x.id)===String(id));if(!m)return;const o=m.options[idx];if(!o.votes)o.votes=[];const i=o.votes.indexOf(currentUser.email);if(i>-1)o.votes.splice(i,1);else o.votes.push(currentUser.email);localStorage.setItem('diferlink_chats',JSON.stringify(a));currentChatMessages=[...ch.messages];renderChatMessages();}
+}
+document.getElementById('chatInput').addEventListener('input',()=>{
+if(!isFirebaseConfigured||!currentChatUser)return;
+db.ref('users/'+currentUser.email.replace(/\./g,'_')).update({typingTo:currentChatUser.email});
+clearTimeout(typingTimeout);
+typingTimeout=setTimeout(()=>{if(isFirebaseConfigured)db.ref('users/'+currentUser.email.replace(/\./g,'_')).update({typingTo:null});},2000);
+});
+
+function openImageViewer(src,type='image'){
+const c=document.getElementById('imageViewerContent');c.innerHTML='';
+if(type==='image'){const i=document.createElement('img');i.src=src;c.appendChild(i);}
+else{const v=document.createElement('video');v.src=src;v.controls=true;v.autoplay=true;c.appendChild(v);}
+document.getElementById('imageViewerModal').style.display='flex';
+}
+function closeImageViewer(){document.getElementById('imageViewerModal').style.display='none';}
+
+// ============ ЗВОНКИ С ДИАГНОСТИКОЙ ============
+const iceServers = {
+  iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' }
+  ]
+};
+
+// Принудительное включение звука (для мобильных)
+function unlockAudioNow(){
+  const a=document.getElementById('remoteAudio');
+  a.muted=false;
+  a.volume=1;
+  const p=a.play();
+  if(p&&p.then){p.then(()=>{remoteAudioUnlocked=true;updateCallDebug('Аудио разблокировано ✓','ok');document.getElementById('unlockAudioBtn').style.display='none';}).catch(e=>updateCallDebug('Ошибка unlock: '+e.message,'err'));}
+  else{remoteAudioUnlocked=true;updateCallDebug('Аудио разблокировано','ok');document.getElementById('unlockAudioBtn').style.display='none';}
+}
+
+// Тест динамика — короткий писк
+function testBeep(){
+  try{
+    const ctx=new (window.AudioContext||window.webkitAudioContext)();
+    const osc=ctx.createOscillator();
+    const gain=ctx.createGain();
+    osc.type='sine';
+    osc.frequency.value=880;
+    gain.gain.value=0.3;
+    osc.connect(gain);gain.connect(ctx.destination);
+    osc.start();
+    setTimeout(()=>{osc.stop();ctx.close();},300);
+    updateCallDebug('Тест динамика: сигнал отправлен','ok');
+  }catch(e){updateCallDebug('Тест динамики: ошибка '+e.message,'err');}
+}
+
+function listenForIncomingCalls(){
+if(!isFirebaseConfigured)return;
+if(incomingCallsListener)incomingCallsListener.off();
+incomingCallsListener=db.ref('calls');
+incomingCallsListener.on('child_added',snap=>{
+const call=snap.val();
+if(!call)return;
+if(call.receiverEmail!==currentUser.email)return;
+if(call.status!=='ringing')return;
+if(Date.now()-call.timestamp>60000)return;
+if(currentCall)return;
+handleIncomingCall(snap.key,call);
+});
+}
+
+function showCallModal(role){
+document.getElementById('callModal').style.display='flex';
+document.getElementById('callDebugInfo').innerHTML='';
+document.getElementById('unlockAudioBtn').style.display='none';
+document.getElementById('callActions').innerHTML='';
+remoteAudioUnlocked=false;
+if(role==='outgoing'){
+document.getElementById('callStatusText').innerText='Звоним...';
+document.getElementById('callActions').innerHTML=`<button class="call-action-btn call-decline" onclick="endCall()" title="Отменить"><i class="fas fa-phone-slash"></i></button>`;
+}else if(role==='incoming'){
+document.getElementById('callStatusText').innerText='Входящий звонок';
+document.getElementById('callActions').innerHTML=`<button class="call-action-btn call-accept" onclick="acceptCall()" title="Принять"><i class="fas fa-phone"></i></button><button class="call-action-btn call-decline" onclick="declineCall()" title="Отклонить"><i class="fas fa-phone-slash"></i></button>`;
+updateCallDebug('Входящий звонок от '+currentCall.peer.name,'warn');
+}else if(role==='active'){
+document.getElementById('callStatusText').innerText='В разговоре';
+document.getElementById('callActions').innerHTML=`<button class="call-action-btn call-mute" id="muteBtn" onclick="toggleMute()"><i class="fas fa-microphone"></i></button><button class="call-action-btn call-decline" onclick="endCall()"><i class="fas fa-phone-slash"></i></button>`;
+startCallTimer();
+}
+}
+
+async function startCall(){
+if(!currentChatUser)return;
+if(!isFirebaseConfigured){alert('Звонки доступны только в онлайн-режиме');return;}
+if(currentCall){alert('Уже в звонке');return;}
+try{localStream=await navigator.mediaDevices.getUserMedia({audio:true});}
+catch(e){alert('Не удалось получить доступ к микрофону: '+e.message);return;}
+const callId=generateUniqueId();
+currentCall={callId,role:'caller',peer:currentChatUser};
+document.getElementById('callPeerAvatar').src=currentChatUser.avatar;
+document.getElementById('callPeerName').innerText=currentChatUser.name;
+pc=new RTCPeerConnection(iceServers);
+pc.oniceconnectionstatechange=()=>{
+  updateCallDebug('ICE: '+pc.iceConnectionState,pc.iceConnectionState==='connected'?'ok':'warn');
+};
+pc.onconnectionstatechange=()=>{
+  updateCallDebug('Соединение: '+pc.connectionState,pc.connectionState==='connected'?'ok':(pc.connectionState==='failed'?'err':'warn'));
+  if(pc.connectionState==='connected'){
+    document.getElementById('callStatusText').innerText='В разговоре';
+    document.getElementById('unlockAudioBtn').style.display=remoteAudioUnlocked?'none':'block';
+  }
+};
+localStream.getTracks().forEach(t=>pc.addTrack(t,localStream));
+pc.onicecandidate=e=>{if(e.candidate)db.ref(`calls/${callId}/callerCandidates`).push(e.candidate.toJSON());};
+pc.ontrack=e=>{
+  updateCallDebug('Получен трек: '+e.track.kind,'ok');
+  const remoteStream=e.streams[0]||new MediaStream([e.track]);
+  const a=document.getElementById('remoteAudio');
+  a.srcObject=remoteStream;
+  a.muted=false;
+  a.volume=1;
+  const p=a.play();
+  if(p&&p.then){
+    p.then(()=>{remoteAudioUnlocked=true;updateCallDebug('Аудио играет ✓','ok');document.getElementById('unlockAudioBtn').style.display='none';})
+    .catch(err=>{updateCallDebug('Не автовоспроизведение: '+err.message,'err');document.getElementById('unlockAudioBtn').style.display='block';});
+  }
+};
+const offer=await pc.createOffer();
+await pc.setLocalDescription(offer);
+await db.ref(`calls/${callId}`).set({
+callerEmail:currentUser.email,callerName:currentUser.name,callerAvatar:currentUser.avatar,
+receiverEmail:currentChatUser.email,receiverName:currentChatUser.name,receiverAvatar:currentChatUser.avatar,
+offer:{type:offer.type,sdp:offer.sdp},status:'ringing',timestamp:Date.now()
+});
+answerListener=db.ref(`calls/${callId}/answer`);
+answerListener.on('value',async snap=>{
+const ans=snap.val();
+if(ans&&pc&&!pc.currentRemoteDescription){
+await pc.setRemoteDescription(new RTCSessionDescription(ans));
+updateCallDebug('Получен ответ','ok');
+flushIceCandidates('caller');
+showCallModal('active');
+}
+});
+receiverCandidatesListener=db.ref(`calls/${callId}/receiverCandidates`);
+receiverCandidatesListener.on('child_added',async snap=>{
+const c=snap.val();
+if(pc&&pc.currentRemoteDescription)try{await pc.addIceCandidate(new RTCIceCandidate(c));}catch(e){}
+else iceCandidatesBuffer.caller.push(c);
+});
+callStatusListener=db.ref(`calls/${callId}/status`);
+callStatusListener.on('value',snap=>{
+const st=snap.val();
+if(st==='declined'){showToast('Звонок отклонён');cleanupCall();}
+else if(st==='ended'){showToast('Звонок завершён');cleanupCall();}
+});
+showCallModal('outgoing');
+}
+
+function handleIncomingCall(callId,call){
+currentCall={callId,role:'receiver',peer:{email:call.callerEmail,name:call.callerName,avatar:call.callerAvatar}};
+document.getElementById('callPeerAvatar').src=call.callerAvatar;
+document.getElementById('callPeerName').innerText=call.callerName;
+showCallModal('incoming');
+callStatusListener=db.ref(`calls/${callId}/status`);
+callStatusListener.on('value',snap=>{
+const st=snap.val();
+if(st==='ended'){showToast('Звонок завершён');cleanupCall();}
+});
+}
+
+async function acceptCall(){
+if(!currentCall||currentCall.role!=='receiver')return;
+const callId=currentCall.callId;
+try{localStream=await navigator.mediaDevices.getUserMedia({audio:true});}
+catch(e){alert('Микрофон недоступен: '+e.message);declineCall();return;}
+pc=new RTCPeerConnection(iceServers);
+pc.oniceconnectionstatechange=()=>{
+  updateCallDebug('ICE: '+pc.iceConnectionState,pc.iceConnectionState==='connected'?'ok':'warn');
+};
+pc.onconnectionstatechange=()=>{
+  updateCallDebug('Соединение: '+pc.connectionState,pc.connectionState==='connected'?'ok':(pc.connectionState==='failed'?'err':'warn'));
+  if(pc.connectionState==='connected'){
+    document.getElementById('callStatusText').innerText='В разговоре';
+    document.getElementById('unlockAudioBtn').style.display=remoteAudioUnlocked?'none':'block';
+  }
+};
+localStream.getTracks().forEach(t=>pc.addTrack(t,localStream));
+pc.onicecandidate=e=>{if(e.candidate)db.ref(`calls/${callId}/receiverCandidates`).push(e.candidate.toJSON());};
+pc.ontrack=e=>{
+  updateCallDebug('Получен трек: '+e.track.kind,'ok');
+  const remoteStream=e.streams[0]||new MediaStream([e.track]);
+  const a=document.getElementById('remoteAudio');
+  a.srcObject=remoteStream;
+  a.muted=false;
+  a.volume=1;
+  const p=a.play();
+  if(p&&p.then){
+    p.then(()=>{remoteAudioUnlocked=true;updateCallDebug('Аудио играет ✓','ok');document.getElementById('unlockAudioBtn').style.display='none';})
+    .catch(err=>{updateCallDebug('Не автовоспроизведение: '+err.message,'err');document.getElementById('unlockAudioBtn').style.display='block';});
+  }
+};
+const offerSnap=await db.ref(`calls/${callId}/offer`).once('value');
+const offer=offerSnap.val();
+if(!offer){cleanupCall();return;}
+await pc.setRemoteDescription(new RTCSessionDescription(offer));
+const ans=await pc.createAnswer();
+await pc.setLocalDescription(ans);
+await db.ref(`calls/${callId}/answer`).set({type:ans.type,sdp:ans.sdp});
+await db.ref(`calls/${callId}/status`).set('accepted');
+updateCallDebug('Отправлен ответ','ok');
+flushIceCandidates('caller');
+callerCandidatesListener=db.ref(`calls/${callId}/callerCandidates`);
+callerCandidatesListener.on('child_added',async snap=>{
+const c=snap.val();
+if(pc&&pc.currentRemoteDescription)try{await pc.addIceCandidate(new RTCIceCandidate(c));}catch(e){}
+});
+showCallModal('active');
+}
+
+async function flushIceCandidates(which){
+const buf=which==='caller'?iceCandidatesBuffer.caller:iceCandidatesBuffer.receiver;
+if(buf.length>0)updateCallDebug('Применено ICE-кандидатов: '+buf.length,'ok');
+for(const c of buf){try{await pc.addIceCandidate(new RTCIceCandidate(c));}catch(e){}}
+if(which==='caller')iceCandidatesBuffer.caller=[];
+else iceCandidatesBuffer.receiver=[];
+}
+
+function declineCall(){
+if(!currentCall)return;
+if(isFirebaseConfigured)db.ref(`calls/${currentCall.callId}/status`).set('declined');
+cleanupCall();
+}
+function endCall(){
+if(!currentCall)return;
+if(isFirebaseConfigured)db.ref(`calls/${currentCall.callId}/status`).set('ended');
+cleanupCall();
+}
+function cleanupCall(){
+if(pc){try{pc.close();}catch(e){}pc=null;}
+if(localStream){localStream.getTracks().forEach(t=>t.stop());localStream=null;}
+if(answerListener){answerListener.off();answerListener=null;}
+if(callStatusListener){callStatusListener.off();callStatusListener=null;}
+if(callerCandidatesListener){callerCandidatesListener.off();callerCandidatesListener=null;}
+if(receiverCandidatesListener){receiverCandidatesListener.off();receiverCandidatesListener=null;}
+if(callTimerInterval){clearInterval(callTimerInterval);callTimerInterval=null;}
+document.getElementById('callTimer').innerText='';
+document.getElementById('remoteAudio').srcObject=null;
+document.getElementById('callModal').style.display='none';
+document.getElementById('callDebugInfo').innerHTML='';
+document.getElementById('unlockAudioBtn').style.display='none';
+currentCall=null;
+iceCandidatesBuffer={caller:[],receiver:[]};
+remoteAudioUnlocked=false;
+}
+function startCallTimer(){
+callStartTime=Date.now();
+if(callTimerInterval)clearInterval(callTimerInterval);
+callTimerInterval=setInterval(()=>{
+const s=Math.floor((Date.now()-callStartTime)/1000);
+const m=Math.floor(s/60);
+document.getElementById('callTimer').innerText=`${String(m).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
+},1000);
+}
+function toggleMute(){
+if(!localStream)return;
+const track=localStream.getAudioTracks()[0];
+if(!track)return;
+track.enabled=!track.enabled;
+const btn=document.getElementById('muteBtn');
+if(btn)btn.innerHTML=track.enabled?'<i class="fas fa-microphone"></i>':'<i class="fas fa-microphone-slash"></i>';
+}
+
+window.addEventListener('resize',()=>{if(document.getElementById('mainContainer').style.display!=='none')document.getElementById('bottomNav').style.display=window.innerWidth<=950?'flex':'none';});
+
+const savedUser=JSON.parse(localStorage.getItem('diferlink_current_user'));
+if(savedUser)loginUser(savedUser);
+else document.getElementById('authModal').style.display='flex';
+</script>
+</body>
+</html>
