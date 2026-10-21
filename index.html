@@ -629,7 +629,6 @@ input.focus();
 }
 document.addEventListener('click',(e)=>{const p=document.getElementById('globalEmojiPicker');if(p&&!p.contains(e.target)&&!e.target.closest('.emoji-btn'))p.remove();});
 
-// ============ PRESENCE: агрессивное обновление ============
 function updatePresence(){
     if(currentUser && isFirebaseConfigured) 
         db.ref('users/'+currentUser.email.replace(/\./g,'_')).update({lastActive:Date.now()});
@@ -646,7 +645,6 @@ window.addEventListener('pagehide',()=>{
         db.ref('users/'+currentUser.email.replace(/\./g,'_')).update({lastActive:0});
 });
 
-// ============ ПРОВЕРКА ВИСЯЩИХ ЗВОНКОВ ============
 function checkPendingCalls(){
     if(!isFirebaseConfigured || !currentUser || currentCall) return;
     db.ref('calls').once('value', snap => {
@@ -1528,18 +1526,13 @@ document.getElementById('imageViewerModal').style.display='flex';
 }
 function closeImageViewer(){document.getElementById('imageViewerModal').style.display='none';}
 
-// ============ ЗВОНКИ ============
+// ============ ЗВОНКИ (ExpressTURN) ============
 const iceServers = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
-    { urls: 'stun:stun2.l.google.com:19302' },
-    { urls: 'stun:stun3.l.google.com:19302' },
-    { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
-    { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-    { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
-  ],
-  iceCandidatePoolSize: 10
+    { urls: 'turn:free.expressturn.com:3478', username: '000000002092388734', credential: 'hLJdGxtDrgYmtIB4JWcBgXm6Xw0=' }
+  ]
 };
 
 function unlockAudioNow(){
