@@ -798,9 +798,27 @@ if(at<1||dot<at)return email;
 return email[0]+'***@'+email[at+1]+'***'+email.slice(dot);
 }
 
+function toArr(x){
+  if(Array.isArray(x))return x;
+  if(x&&typeof x==='object')return Object.values(x).filter(Boolean);
+  return [];
+}
+function isValidUser(u){
+  return u&&typeof u==='object'&&typeof u.email==='string'&&u.email.length>0;
+}
+function getUserByEmail(email){
+  const low=String(email||'').toLowerCase();
+  if(!low)return null;
+  return allUsersData.find(u=>isValidUser(u)&&u.email.toLowerCase()===low)||null;
+}
+function getSafeFriends(){
+  if(!currentUser||!currentUser.friends)return [];
+  return toArr(currentUser.friends).filter(e=>typeof e==='string').map(e=>e.toLowerCase());
+}
+
 function updateCallDebug(msg,cls){const el=document.getElementById('callDebugInfo');if(!el)return;el.style.display='block';const d=document.createElement('div');if(cls)d.className=cls;d.textContent='['+new Date().toLocaleTimeString()+'] '+msg;el.appendChild(d);el.scrollTop=el.scrollHeight;}
 
-function calcXP(email){let xp=allPosts.filter(p=>p.authorEmail===email).length*10;xp+=allStories.filter(s=>s.authorEmail===email).length*15;allPosts.forEach(p=>{if(p.comments)p.comments.forEach(c=>{if(c.authorEmail===email)xp+=5;});});const u=allUsersData.find(x=>x.email===email);if(u&&u.friends)xp+=u.friends.length*20;return xp;}
+function calcXP(email){let xp=allPosts.filter(p=>p.authorEmail===email).length*10;xp+=allStories.filter(s=>s.authorEmail===email).length*15;allPosts.forEach(p=>{if(p.comments)p.comments.forEach(c=>{if(c.authorEmail===email)xp+=5;});});const u=getUserByEmail(email);if(u&&u.friends)xp+=toArr(u.friends).length*20;return xp;}
 function getLevelInfo(xp){let level=1,minXP=0,nextXP=100;while(xp>=nextXP){level++;minXP=nextXP;nextXP=minXP+level*100;}return{level,progress:Math.round(((xp-minXP)/(nextXP-minXP))*100),nextXP,xp};}
 
 function showEmojiPicker(inputId,event){
@@ -866,30 +884,42 @@ function checkPendingCalls(){if(!isFirebaseConfigured||!currentUser||currentCall
 
 function initDataListeners(){
 if(isFirebaseConfigured){
-db.ref('posts').on('value',s=>{allPosts=s.val()?Object.values(s.val()):[];renderFeed();if(currentProfileViewEmail)renderProfile(currentProfileViewEmail);});
-db.ref('stories').on('value',s=>{allStories=s.val()?Object.values(s.val()):[];renderStories();});
-db.ref('communities').on('value',s=>{allCommunities=s.val()?Object.values(s.val()):[];renderCommunitiesList();updateCommunitySelect();});
-db.ref('notifications').on('value',s=>{allNotifications=s.val()?Object.values(s.val()):[];updateNotificationBadge();if(document.getElementById('notificationsPage').style.display==='flex')renderNotifications();});
-db.ref('friendRequests').on('value',s=>{allFriendRequests=s.val()?Object.values(s.val()):[];if(currentProfileViewEmail)renderProfile(currentProfileViewEmail);if(document.getElementById('notificationsPage').style.display==='flex')renderNotifications();updateFriendsUI();});
-db.ref('users').on('value',s=>{allUsersData=s.val()?Object.values(s.val()):[];if(document.getElementById('friendsPage').style.display==='flex'||document.getElementById('findPeoplePage').style.display==='flex'){updateFriendsUI();filterPeopleList();}});
+db.ref('posts').on('value',s=>{allPosts=s.val()?Object.values(s.val()).filter(Boolean):[];renderFeed();if(currentProfileViewEmail)renderProfile(currentProfileViewEmail);});
+db.ref('stories').on('value',s=>{allStories=s.val()?Object.values(s.val()).filter(Boolean):[];renderStories();});
+db.ref('communities').on('value',s=>{allCommunities=s.val()?Object.values(s.val()).filter(Boolean):[];renderCommunitiesList();updateCommunitySelect();});
+db.ref('notifications').on('value',s=>{allNotifications=s.val()?Object.values(s.val()).filter(Boolean):[];updateNotificationBadge();if(document.getElementById('notificationsPage').style.display==='flex')renderNotifications();});
+db.ref('friendRequests').on('value',s=>{allFriendRequests=s.val()?Object.values(s.val()).filter(Boolean):[];if(currentProfileViewEmail)renderProfile(currentProfileViewEmail);if(document.getElementById('notificationsPage').style.display==='flex')renderNotifications();updateFriendsUI();});
+db.ref('users').on('value',s=>{allUsersData=s.val()?Object.values(s.val()).filter(isValidUser):[];if(document.getElementById('friendsPage').style.display==='flex'||document.getElementById('findPeoplePage').style.display==='flex'){updateFriendsUI();filterPeopleList();}});
 db.ref('chats').on('value',()=>{if(document.getElementById('messagesListPage').style.display==='flex')renderMessagesList();});
-db.ref('stickerPacks').on('value',s=>{allStickerPacks=s.val()?Object.values(s.val()):[];});
+db.ref('stickerPacks').on('value',s=>{allStickerPacks=s.val()?Object.values(s.val()).filter(Boolean):[];});
 }else{
-allPosts=JSON.parse(localStorage.getItem('diferlink_posts'))||[];
-allStories=JSON.parse(localStorage.getItem('diferlink_stories'))||[];
-allCommunities=JSON.parse(localStorage.getItem('diferlink_communities'))||[];
-allNotifications=JSON.parse(localStorage.getItem('diferlink_notifications'))||[];
-allFriendRequests=JSON.parse(localStorage.getItem('diferlink_friendRequests'))||[];
-allUsersData=JSON.parse(localStorage.getItem('diferlink_users'))||[];
-allStickerPacks=JSON.parse(localStorage.getItem('diferlink_stickerPacks'))||[];
+allPosts=(JSON.parse(localStorage.getItem('diferlink_posts'))||[]).filter(Boolean);
+allStories=(JSON.parse(localStorage.getItem('diferlink_stories'))||[]).filter(Boolean);
+allCommunities=(JSON.parse(localStorage.getItem('diferlink_communities'))||[]).filter(Boolean);
+allNotifications=(JSON.parse(localStorage.getItem('diferlink_notifications'))||[]).filter(Boolean);
+allFriendRequests=(JSON.parse(localStorage.getItem('diferlink_friendRequests'))||[]).filter(Boolean);
+allUsersData=(JSON.parse(localStorage.getItem('diferlink_users'))||[]).filter(isValidUser);
+allStickerPacks=(JSON.parse(localStorage.getItem('diferlink_stickerPacks'))||[]).filter(Boolean);
 renderFeed();renderStories();renderCommunitiesList();updateCommunitySelect();
 updateNotificationBadge();updateFriendsUI();
 if(currentProfileViewEmail)renderProfile(currentProfileViewEmail);
 }
 }
-function saveToDB(path,data){if(isFirebaseConfigured)db.ref(path).set(data).catch(e=>console.error(e));else{const k='diferlink_'+path.split('/')[0];let a=JSON.parse(localStorage.getItem(k))||[];const i=a.findIndex(x=>String(x.id)===String(data.id));if(i>-1)a[i]=data;else a.push(data);localStorage.setItem(k,JSON.stringify(a));if(path.startsWith('users/'))allUsersData=JSON.parse(localStorage.getItem('diferlink_users'))||[];if(path.startsWith('stickerPacks/'))allStickerPacks=JSON.parse(localStorage.getItem('diferlink_stickerPacks'))||[];}}
+function saveToDB(path,data){if(isFirebaseConfigured)db.ref(path).set(data).catch(e=>console.error(e));else{const k='diferlink_'+path.split('/')[0];let a=JSON.parse(localStorage.getItem(k))||[];const i=a.findIndex(x=>String(x.id)===String(data.id));if(i>-1)a[i]=data;else a.push(data);localStorage.setItem(k,JSON.stringify(a));if(path.startsWith('users/'))allUsersData=(JSON.parse(localStorage.getItem('diferlink_users'))||[]).filter(isValidUser);if(path.startsWith('stickerPacks/'))allStickerPacks=JSON.parse(localStorage.getItem('diferlink_stickerPacks'))||[];}}
 function deleteFromDB(path,id){if(isFirebaseConfigured)db.ref(path).child(id).remove();else{const k='diferlink_'+path;let a=JSON.parse(localStorage.getItem(k))||[];a=a.filter(x=>String(x.id)!==String(id));localStorage.setItem(k,JSON.stringify(a));initDataListeners();}}
-async function getUserFromDB(email){email=email.toLowerCase();if(isFirebaseConfigured){const s=await db.ref('users/'+email.replace(/\./g,'_')).once('value');return s.val();}return(JSON.parse(localStorage.getItem('diferlink_users'))||[]).find(u=>u.email.toLowerCase()===email);}
+async function getUserFromDB(email){
+  email=String(email||'').toLowerCase();
+  if(!email)return null;
+  if(isFirebaseConfigured){
+    try{
+      const s=await db.ref('users/'+email.replace(/\./g,'_')).once('value');
+      const v=s.val();
+      return isValidUser(v)?v:null;
+    }catch(e){console.error('getUserFromDB',e);return null;}
+  }
+  const arr=(JSON.parse(localStorage.getItem('diferlink_users'))||[]).filter(isValidUser);
+  return arr.find(u=>u.email.toLowerCase()===email)||null;
+}
 
 document.getElementById('tabLogin').onclick=()=>{document.getElementById('tabLogin').classList.add('active');document.getElementById('tabRegister').classList.remove('active');document.getElementById('loginForm').style.display='flex';document.getElementById('registerForm').style.display='none';};
 document.getElementById('tabRegister').onclick=()=>{document.getElementById('tabRegister').classList.add('active');document.getElementById('tabLogin').classList.remove('active');document.getElementById('registerForm').style.display='flex';document.getElementById('loginForm').style.display='none';};
@@ -899,7 +929,7 @@ document.getElementById('loginForm').onsubmit=async(e)=>{e.preventDefault();cons
 
 function loginUser(user){
 user.email=user.email.toLowerCase();
-if(!user.friends)user.friends=[];
+user.friends=toArr(user.friends).filter(e=>typeof e==='string').map(e=>e.toLowerCase());
 if(!user.privacy)user.privacy='public';
 currentUser=user;
 localStorage.setItem('diferlink_current_user',JSON.stringify(user));
@@ -970,9 +1000,9 @@ const q=document.getElementById('feedSearchInput').value.trim().toLowerCase();
 const res=document.getElementById('feedSearchResults');
 if(!q){res.classList.remove('show');return;}
 let userHits=[],commHits=[],postHits=[];
-allUsersData.forEach(u=>{if(u.email.toLowerCase()!==currentUser.email&&(u.name.toLowerCase().includes(q)||u.email.toLowerCase().includes(q)))userHits.push(u);});
-allCommunities.forEach(c=>{if(c.name.toLowerCase().includes(q)||(c.description||'').toLowerCase().includes(q))commHits.push(c);});
-allPosts.forEach(p=>{if(p.text&&p.text.toLowerCase().includes(q)&&p.authorAvatar)postHits.push(p);});
+allUsersData.forEach(u=>{if(isValidUser(u)&&u.email.toLowerCase()!==currentUser.email&&(u.name.toLowerCase().includes(q)||u.email.toLowerCase().includes(q)))userHits.push(u);});
+allCommunities.forEach(c=>{if(c&&c.name&&(c.name.toLowerCase().includes(q)||(c.description||'').toLowerCase().includes(q)))commHits.push(c);});
+allPosts.forEach(p=>{if(p&&p.text&&p.text.toLowerCase().includes(q)&&p.authorAvatar)postHits.push(p);});
 if(userHits.length===0&&commHits.length===0&&postHits.length===0){res.innerHTML='<div class="feed-search-empty">Ничего не найдено</div>';res.classList.add('show');return;}
 let html='';
 if(userHits.length>0){html+='<div class="feed-search-section">Люди</div>';userHits.slice(0,5).forEach(u=>{html+=`<div class="feed-search-item" onclick="switchView('profile','${u.email}');document.getElementById('feedSearchResults').classList.remove('show');document.getElementById('feedSearchInput').value='';"><img src="${u.avatar}"><div class="fsi-info"><div class="fsi-name">${u.name}</div><div class="fsi-sub">${maskEmail(u.email)}</div></div></div>`;});}
@@ -991,22 +1021,28 @@ handleFeedSearch();
 
 // ============ PROFILE ============
 async function renderProfile(email){
-email=email.toLowerCase();currentProfileViewEmail=email;
-const user=allUsersData.find(u=>u.email.toLowerCase()===email)||await getUserFromDB(email);
-if(!user)return;
+try{
+email=String(email||'').toLowerCase();
+if(!email)return;
+currentProfileViewEmail=email;
+
+const user=getUserByEmail(email)||await getUserFromDB(email);
+if(!user){return;}
+
 const isOwn=email===currentUser.email;
 const privacy=user.privacy||'public';
 const blocked=!isOwn&&privacy==='private';
 const partial=!isOwn&&privacy==='partial';
+
 if(blocked){
 document.getElementById('profileAvatar').src='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="%23555"/><text x="50" y="50" font-size="50" text-anchor="middle" dy=".3em" fill="white">?</text></svg>';
 document.getElementById('profileCoverImg').src='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 300"><rect width="1000" height="300" fill="%23555"/><text x="500" y="150" font-size="60" text-anchor="middle" dy=".3em" fill="white">?</text></svg>';
 }else{
-document.getElementById('profileAvatar').src=user.avatar;
+document.getElementById('profileAvatar').src=user.avatar||'';
 document.getElementById('profileCoverImg').src=user.cover||'https://dummyimage.com/1000x300/cccccc/ffffff&text=Cover';
 }
-document.getElementById('profileName').innerText=user.name;
-// Email wrapper
+document.getElementById('profileName').innerText=user.name||'Пользователь';
+
 const emailW=document.getElementById('profileEmailWrapper');
 if(isOwn){
 emailW.innerHTML=`<span id="emailText">${emailRevealed?user.email:maskEmail(user.email)}</span><button class="eye-toggle-btn" onclick="toggleEmailReveal('${user.email}')"><i class="fas fa-eye${emailRevealed?'-slash':''}"></i></button>`;
@@ -1014,6 +1050,7 @@ emailW.innerHTML=`<span id="emailText">${emailRevealed?user.email:maskEmail(user
 emailW.innerHTML='';
 }
 document.getElementById('profileBio').innerText=user.bio||'';
+
 const act=document.getElementById('profileActions');act.innerHTML='';
 if(isOwn){
 act.innerHTML=`<button class="btn-primary" id="editProfileBtnDynamic" style="width:auto;padding:10px 20px"><i class="fas fa-pen"></i> Редактировать</button><button class="btn-secondary" id="settingsProfileBtnDynamic" style="width:auto;padding:10px 20px"><i class="fas fa-cog"></i> Настройки</button>`;
@@ -1028,9 +1065,10 @@ document.getElementById('levelBarFill').style.width=info.progress+'%';
 if(blocked){act.innerHTML=`<p style="color:var(--text-muted);font-size:14px;text-align:center;width:100%">Владелец данного профиля заблокировал просмотр его профиля.</p>`;}
 else if(partial){act.innerHTML=`<p style="color:var(--text-muted);font-size:14px;text-align:center;width:100%">Пользователь ограничил доступ к публикациям.</p>`;}
 else{
-const isF=currentUser.friends&&currentUser.friends.some(e=>e.toLowerCase()===email);
-const hasP=allFriendRequests.some(r=>r.fromEmail===currentUser.email&&r.toEmail===email&&r.status==='pending');
-const inc=allFriendRequests.find(r=>r.fromEmail===email&&r.toEmail===currentUser.email&&r.status==='pending');
+const friends=getSafeFriends();
+const isF=friends.includes(email);
+const hasP=allFriendRequests.some(r=>r&&r.fromEmail===currentUser.email&&r.toEmail===email&&r.status==='pending');
+const inc=allFriendRequests.find(r=>r&&r.fromEmail===email&&r.toEmail===currentUser.email&&r.status==='pending');
 let b='';
 if(isF)b+=`<button class="btn-danger" onclick="removeFriend('${email}')" style="width:auto;padding:10px 20px"><i class="fas fa-user-minus"></i> Удалить</button>`;
 else if(hasP)b+=`<button class="btn-secondary" disabled style="width:auto;padding:10px 20px"><i class="fas fa-clock"></i> Отправлено</button>`;
@@ -1042,26 +1080,34 @@ act.innerHTML=b;
 }
 document.getElementById('levelBarContainer').style.display='none';
 }
+
 const tabs=document.getElementById('profileTabs');
 if(blocked||partial){tabs.style.display='none';document.getElementById('profileContent').innerHTML='';return;}
 tabs.style.display='flex';
 renderProfileTabs(email);
 if(currentProfileTab==='posts'||!profileFilter.includes(currentProfileTab)){currentProfileTab=profileFilter[0]||'posts';}
 renderProfileContent(email);
+}catch(e){
+console.error('renderProfile error',e);
+}
 }
 function toggleEmailReveal(email){emailRevealed=!emailRevealed;document.getElementById('emailText').innerText=emailRevealed?email:maskEmail(email);event.target.closest('button').innerHTML=emailRevealed?'<i class="fas fa-eye-slash"></i>':'<i class="fas fa-eye"></i>';}
 function renderProfileTabs(email){const tabs=document.getElementById('profileTabs');tabs.innerHTML=`<button class="filter-btn" onclick="openFilterModal()" title="Фильтр разделов"><i class="fas fa-filter"></i></button>`;profileFilter.forEach(k=>{const d=document.createElement('div');d.className='profile-tab'+(currentProfileTab===k?' active':'');d.innerText=FILTER_LABELS[k];d.onclick=()=>switchProfileTab(k);tabs.appendChild(d);});}
 function switchProfileTab(tab){currentProfileTab=tab;document.querySelectorAll('.profile-tab').forEach(t=>t.classList.toggle('active',t.innerText===FILTER_LABELS[tab]));renderProfileContent(currentProfileViewEmail);}
 function renderProfileContent(email){
+try{
 const c=document.getElementById('profileContent');c.innerHTML='';
-const user=allUsersData.find(u=>u.email.toLowerCase()===email);if(!user)return;
-if(currentProfileTab==='posts'){const now=Date.now();const userPosts=allPosts.filter(p=>p.authorEmail===email&&(!p.expiresAt||p.expiresAt>now)&&p.authorAvatar&&(!p.media||p.media.length===0)&&!p.poll).sort((a,b)=>b.timestamp-a.timestamp);if(userPosts.length===0){c.innerHTML='<p style="color:var(--text-muted);padding:20px;text-align:center">Постов нет.</p>';return;}c.innerHTML=`<div class="profile-grid">${userPosts.map(p=>`<div class="post" onclick="switchView('home')"><div class="text-only-post">${(p.text||'').substring(0,100)}</div></div>`).join('')}</div>`;}
-else if(currentProfileTab==='stories'){const st=allStories.filter(s=>s.authorEmail===email).sort((a,b)=>b.timestamp-a.timestamp);if(st.length===0){c.innerHTML='<p style="color:var(--text-muted);padding:20px;text-align:center">Историй нет.</p>';return;}c.innerHTML=`<div class="profile-grid">${st.map(s=>{const m=s.media||(s.images?s.images.map(i=>({type:'image',data:i})):[]);if(m.length===0)return'';const f=m[0];if(f.type==='image')return `<div class="post" onclick="openStoryViewer('${email}')"><div class="post-media single"><img src="${f.data}"></div></div>`;if(f.type==='video')return `<div class="post" onclick="openStoryViewer('${email}')"><div class="post-media single"><video src="${f.data}"></video></div></div>`;return `<div class="post text-only-post" onclick="openStoryViewer('${email}')">🎵 Аудио</div>`;}).join('')}</div>`;}
-else if(currentProfileTab==='friends'){const f=user.friends||[];if(f.length===0){c.innerHTML='<p style="color:var(--text-muted);padding:20px;text-align:center">Друзей нет.</p>';return;}let h='';f.forEach(e=>{const u=allUsersData.find(x=>x.email.toLowerCase()===e.toLowerCase());if(u)h+=generateUserCardHTML(u,'friend');});c.innerHTML=h;}
-else if(currentProfileTab==='photos'){const posts=allPosts.filter(p=>p.authorEmail===email&&p.media&&p.media.some(m=>m.type==='image'));if(posts.length===0){c.innerHTML='<p style="color:var(--text-muted);padding:20px;text-align:center">Фото нет.</p>';return;}let h='';posts.forEach(p=>{p.media.filter(m=>m.type==='image').forEach(m=>{h+=`<div class="post" onclick="openImageViewer('${m.data}','image')"><div class="post-media single"><img src="${m.data}"></div></div>`;});});c.innerHTML=`<div class="profile-grid">${h}</div>`;}
-else if(currentProfileTab==='videos'){const posts=allPosts.filter(p=>p.authorEmail===email&&p.media&&p.media.some(m=>m.type==='video'));if(posts.length===0){c.innerHTML='<p style="color:var(--text-muted);padding:20px;text-align:center">Видео нет.</p>';return;}let h='';posts.forEach(p=>{p.media.filter(m=>m.type==='video').forEach(m=>{h+=`<div class="post" onclick="openImageViewer('${m.data}','video')"><div class="post-media single"><video src="${m.data}"></video></div></div>`;});});c.innerHTML=`<div class="profile-grid">${h}</div>`;}
-else if(currentProfileTab==='music'){const posts=allPosts.filter(p=>p.authorEmail===email&&p.media&&p.media.some(m=>m.type==='audio'));if(posts.length===0){c.innerHTML='<p style="color:var(--text-muted);padding:20px;text-align:center">Музыки нет.</p>';return;}let h='';posts.forEach(p=>{p.media.filter(m=>m.type==='audio').forEach(m=>{h+=`<div class="post" style="padding:15px"><audio controls src="${m.data}" style="width:100%"></audio></div>`;});});c.innerHTML=h;}
-else if(currentProfileTab==='polls'){const posts=allPosts.filter(p=>p.authorEmail===email&&p.poll);if(posts.length===0){c.innerHTML='<p style="color:var(--text-muted);padding:20px;text-align:center">Опросов нет.</p>';return;}let h='';posts.forEach(p=>{h+=`<div class="post" style="padding:15px"><div style="font-weight:600;margin-bottom:10px">${p.poll.question}</div>${p.poll.options.map(o=>`<div style="padding:8px;background:var(--bg-color);border-radius:6px;margin-bottom:5px;font-size:14px">${o.text} — ${o.votes?o.votes.length:0} голосов</div>`).join('')}</div>`;});c.innerHTML=h;}
+const user=getUserByEmail(email);if(!user)return;
+if(currentProfileTab==='posts'){const now=Date.now();const userPosts=allPosts.filter(p=>p&&p.authorEmail===email&&(!p.expiresAt||p.expiresAt>now)&&p.authorAvatar&&(!p.media||p.media.length===0)&&!p.poll).sort((a,b)=>b.timestamp-a.timestamp);if(userPosts.length===0){c.innerHTML='<p style="color:var(--text-muted);padding:20px;text-align:center">Постов нет.</p>';return;}c.innerHTML=`<div class="profile-grid">${userPosts.map(p=>`<div class="post" onclick="switchView('home')"><div class="text-only-post">${(p.text||'').substring(0,100)}</div></div>`).join('')}</div>`;}
+else if(currentProfileTab==='stories'){const st=allStories.filter(s=>s&&s.authorEmail===email).sort((a,b)=>b.timestamp-a.timestamp);if(st.length===0){c.innerHTML='<p style="color:var(--text-muted);padding:20px;text-align:center">Историй нет.</p>';return;}c.innerHTML=`<div class="profile-grid">${st.map(s=>{const m=s.media||(s.images?s.images.map(i=>({type:'image',data:i})):[]);if(m.length===0)return'';const f=m[0];if(f.type==='image')return `<div class="post" onclick="openStoryViewer('${email}')"><div class="post-media single"><img src="${f.data}"></div></div>`;if(f.type==='video')return `<div class="post" onclick="openStoryViewer('${email}')"><div class="post-media single"><video src="${f.data}"></video></div></div>`;return `<div class="post text-only-post" onclick="openStoryViewer('${email}')">🎵 Аудио</div>`;}).join('')}</div>`;}
+else if(currentProfileTab==='friends'){const f=toArr(user.friends);if(f.length===0){c.innerHTML='<p style="color:var(--text-muted);padding:20px;text-align:center">Друзей нет.</p>';return;}let h='';f.forEach(e=>{const u=getUserByEmail(e);if(u)h+=generateUserCardHTML(u,'friend');});c.innerHTML=h;}
+else if(currentProfileTab==='photos'){const posts=allPosts.filter(p=>p&&p.authorEmail===email&&p.media&&p.media.some(m=>m.type==='image'));if(posts.length===0){c.innerHTML='<p style="color:var(--text-muted);padding:20px;text-align:center">Фото нет.</p>';return;}let h='';posts.forEach(p=>{p.media.filter(m=>m.type==='image').forEach(m=>{h+=`<div class="post" onclick="openImageViewer('${m.data}','image')"><div class="post-media single"><img src="${m.data}"></div></div>`;});});c.innerHTML=`<div class="profile-grid">${h}</div>`;}
+else if(currentProfileTab==='videos'){const posts=allPosts.filter(p=>p&&p.authorEmail===email&&p.media&&p.media.some(m=>m.type==='video'));if(posts.length===0){c.innerHTML='<p style="color:var(--text-muted);padding:20px;text-align:center">Видео нет.</p>';return;}let h='';posts.forEach(p=>{p.media.filter(m=>m.type==='video').forEach(m=>{h+=`<div class="post" onclick="openImageViewer('${m.data}','video')"><div class="post-media single"><video src="${m.data}"></video></div></div>`;});});c.innerHTML=`<div class="profile-grid">${h}</div>`;}
+else if(currentProfileTab==='music'){const posts=allPosts.filter(p=>p&&p.authorEmail===email&&p.media&&p.media.some(m=>m.type==='audio'));if(posts.length===0){c.innerHTML='<p style="color:var(--text-muted);padding:20px;text-align:center">Музыки нет.</p>';return;}let h='';posts.forEach(p=>{p.media.filter(m=>m.type==='audio').forEach(m=>{h+=`<div class="post" style="padding:15px"><audio controls src="${m.data}" style="width:100%"></audio></div>`;});});c.innerHTML=h;}
+else if(currentProfileTab==='polls'){const posts=allPosts.filter(p=>p&&p.authorEmail===email&&p.poll);if(posts.length===0){c.innerHTML='<p style="color:var(--text-muted);padding:20px;text-align:center">Опросов нет.</p>';return;}let h='';posts.forEach(p=>{h+=`<div class="post" style="padding:15px"><div style="font-weight:600;margin-bottom:10px">${p.poll.question}</div>${p.poll.options.map(o=>`<div style="padding:8px;background:var(--bg-color);border-radius:6px;margin-bottom:5px;font-size:14px">${o.text} — ${o.votes?o.votes.length:0} голосов</div>`).join('')}</div>`;});c.innerHTML=h;}
+}catch(e){
+console.error('renderProfileContent error',e);
+}
 }
 
 function openSettingsModal(){
@@ -1097,26 +1143,118 @@ document.getElementById('cancelFilterBtn').onclick=()=>{document.getElementById(
 // ============ FRIENDS ============
 function switchNetworkTab(tab){currentNetworkTab=tab;document.getElementById('tabMyFriends').classList.toggle('active',tab==='myFriends');document.getElementById('tabIncomingRequests').classList.toggle('active',tab==='incomingRequests');updateFriendsUI();}
 function updateFriendsUI(){
+try{
 if(document.getElementById('friendsPage').style.display!=='flex')return;
 const container=document.getElementById('friendsListContainer');container.innerHTML='';
-const incomingReqs=allFriendRequests.filter(r=>(r.toEmail||'').toLowerCase()===currentUser.email&&r.status==='pending');
+const incomingReqs=allFriendRequests.filter(r=>r&&String(r.toEmail||'').toLowerCase()===currentUser.email&&r.status==='pending');
 const badge=document.getElementById('incomingReqCount');
-if(incomingReqs.length>0){badge.innerText=incomingReqs.length;badge.style.display='inline-block';}else badge.style.display='none';
-if(currentNetworkTab==='myFriends'){const f=currentUser.friends||[];if(f.length===0){container.innerHTML='<p style="text-align:center;color:var(--text-muted);padding:20px">У вас пока нет друзей.</p>';return;}f.forEach(email=>{const u=allUsersData.find(x=>x.email.toLowerCase()===email.toLowerCase());if(u)container.innerHTML+=generateUserCardHTML(u,'friend');});}
-else{if(incomingReqs.length===0){container.innerHTML='<p style="text-align:center;color:var(--text-muted);padding:20px">Нет новых заявок.</p>';return;}incomingReqs.forEach(req=>{const u=allUsersData.find(x=>x.email.toLowerCase()===req.fromEmail.toLowerCase());if(u)container.innerHTML+=generateUserCardHTML(u,'incoming_request');});}
+if(badge){if(incomingReqs.length>0){badge.innerText=incomingReqs.length;badge.style.display='inline-block';}else badge.style.display='none';}
+if(currentNetworkTab==='myFriends'){
+const friends=getSafeFriends();
+if(friends.length===0){container.innerHTML='<p style="text-align:center;color:var(--text-muted);padding:20px">У вас пока нет друзей.</p>';return;}
+friends.forEach(email=>{const u=getUserByEmail(email);if(u)container.innerHTML+=generateUserCardHTML(u,'friend');});
+}else{
+if(incomingReqs.length===0){container.innerHTML='<p style="text-align:center;color:var(--text-muted);padding:20px">Нет новых заявок.</p>';return;}
+incomingReqs.forEach(req=>{const u=getUserByEmail(req.fromEmail);if(u)container.innerHTML+=generateUserCardHTML(u,'incoming_request');});
 }
-function filterPeopleList(){const query=document.getElementById('searchPeopleInput').value.toLowerCase().trim();const container=document.getElementById('findPeopleListContainer');container.innerHTML='';let others=allUsersData.filter(u=>u.email.toLowerCase()!==currentUser.email);if(query)others=others.filter(u=>u.name.toLowerCase().includes(query)||u.email.toLowerCase().includes(query));if(others.length===0){container.innerHTML='<p style="text-align:center;color:var(--text-muted);padding:20px">Никого не найдено.</p>';return;}others.forEach(u=>{const isF=currentUser.friends&&currentUser.friends.some(e=>e.toLowerCase()===u.email.toLowerCase());const hasS=allFriendRequests.some(r=>r.fromEmail.toLowerCase()===currentUser.email&&r.toEmail.toLowerCase()===u.email.toLowerCase()&&r.status==='pending');const hasI=allFriendRequests.some(r=>r.fromEmail.toLowerCase()===u.email.toLowerCase()&&r.toEmail.toLowerCase()===currentUser.email&&r.status==='pending');let s='not_friend';if(isF)s='friend';else if(hasS)s='sent';else if(hasI)s='incoming_request';container.innerHTML+=generateUserCardHTML(u,s);});}
-function generateUserCardHTML(user,statusType){let btns='';const msgBtn=`<button class="btn-small btn-small-secondary" onclick="switchView('chat', '${user.email}')"><i class="fas fa-envelope"></i></button>`;if(statusType==='friend')btns=`${msgBtn}<button class="btn-small btn-small-danger" onclick="removeFriend('${user.email}')"><i class="fas fa-user-minus"></i> Удалить</button>`;else if(statusType==='sent')btns=`${msgBtn}<button class="btn-small btn-small-secondary" disabled><i class="fas fa-clock"></i> Отправлено</button>`;else if(statusType==='incoming_request')btns=`<button class="btn-small btn-small-primary" onclick="acceptFriendRequest('${user.email}')"><i class="fas fa-check"></i> Принять</button><button class="btn-small btn-small-danger" onclick="declineFriendRequest('${user.email}')"><i class="fas fa-times"></i></button>`;else btns=`${msgBtn}<button class="btn-small btn-small-primary" onclick="sendFriendRequest('${user.email}')"><i class="fas fa-user-plus"></i> Добавить</button>`;return `<div class="user-card"><img src="${user.avatar}" onclick="switchView('profile', '${user.email}')"><div class="user-card-info" onclick="switchView('profile', '${user.email}')"><div class="user-card-name">${user.name}</div><div class="user-card-email">${maskEmail(user.email)}</div></div><div class="user-card-actions">${btns}</div></div>`;}
-function sendFriendRequest(toEmail){toEmail=toEmail.toLowerCase();if(toEmail===currentUser.email)return;if(allFriendRequests.find(r=>r.fromEmail===currentUser.email&&r.toEmail===toEmail&&r.status==='pending'))return alert('Отправлено');const rid=generateUniqueId();saveToDB('friendRequests/'+rid,{id:rid,fromEmail:currentUser.email,toEmail,status:'pending',timestamp:Date.now()});const nid=generateUniqueId();saveToDB('notifications/'+nid,{id:nid,toEmail,fromEmail:currentUser.email,fromName:currentUser.name,fromAvatar:currentUser.avatar,type:'friend_request',timestamp:Date.now(),read:false});if(!isFirebaseConfigured){initDataListeners();updateFriendsUI();filterPeopleList();if(currentProfileViewEmail===toEmail)renderProfile(toEmail);}}
-async function acceptFriendRequest(fromEmail){fromEmail=fromEmail.toLowerCase();if(!currentUser.friends)currentUser.friends=[];if(!currentUser.friends.includes(fromEmail))currentUser.friends.push(fromEmail);saveToDB('users/'+currentUser.email.replace(/\./g,'_'),currentUser);const s=await getUserFromDB(fromEmail);if(s){if(!s.friends)s.friends=[];if(!s.friends.includes(currentUser.email))s.friends.push(currentUser.email);saveToDB('users/'+fromEmail.replace(/\./g,'_'),s);}const nid=generateUniqueId();saveToDB('notifications/'+nid,{id:nid,toEmail:fromEmail,fromEmail:currentUser.email,fromName:currentUser.name,fromAvatar:currentUser.avatar,type:'friend_accepted',timestamp:Date.now(),read:false});const req=allFriendRequests.find(r=>r.fromEmail===fromEmail&&r.toEmail===currentUser.email&&r.status==='pending');if(req)deleteFromDB('friendRequests',req.id);const n=allNotifications.find(x=>x.type==='friend_request'&&x.fromEmail===fromEmail&&(x.toEmail||'').toLowerCase()===currentUser.email);if(n)deleteFromDB('notifications',n.id);if(!isFirebaseConfigured){localStorage.setItem('diferlink_current_user',JSON.stringify(currentUser));initDataListeners();updateFriendsUI();filterPeopleList();renderNotifications();if(currentProfileViewEmail===fromEmail)renderProfile(fromEmail);}}
-function declineFriendRequest(fromEmail){fromEmail=fromEmail.toLowerCase();const req=allFriendRequests.find(r=>r.fromEmail===fromEmail&&r.toEmail===currentUser.email&&r.status==='pending');if(req)deleteFromDB('friendRequests',req.id);const n=allNotifications.find(x=>x.type==='friend_request'&&x.fromEmail===fromEmail&&(x.toEmail||'').toLowerCase()===currentUser.email);if(n)deleteFromDB('notifications',n.id);if(!isFirebaseConfigured){initDataListeners();updateFriendsUI();filterPeopleList();renderNotifications();if(currentProfileViewEmail===fromEmail)renderProfile(fromEmail);}}
-async function removeFriend(friendEmail){friendEmail=friendEmail.toLowerCase();if(!confirm(`Удалить ${friendEmail}?`))return;currentUser.friends=currentUser.friends.filter(e=>e.toLowerCase()!==friendEmail);saveToDB('users/'+currentUser.email.replace(/\./g,'_'),currentUser);const f=await getUserFromDB(friendEmail);if(f){f.friends=(f.friends||[]).filter(e=>e.toLowerCase()!==currentUser.email);saveToDB('users/'+friendEmail.replace(/\./g,'_'),f);}if(!isFirebaseConfigured){localStorage.setItem('diferlink_current_user',JSON.stringify(currentUser));initDataListeners();updateFriendsUI();filterPeopleList();if(currentProfileViewEmail===friendEmail)renderProfile(friendEmail);}}
+}catch(e){console.error('updateFriendsUI',e);}
+}
+function filterPeopleList(){
+try{
+const query=document.getElementById('searchPeopleInput').value.toLowerCase().trim();
+const container=document.getElementById('findPeopleListContainer');container.innerHTML='';
+let others=allUsersData.filter(u=>isValidUser(u)&&u.email.toLowerCase()!==currentUser.email);
+if(query)others=others.filter(u=>u.name.toLowerCase().includes(query)||u.email.toLowerCase().includes(query));
+if(others.length===0){container.innerHTML='<p style="text-align:center;color:var(--text-muted);padding:20px">Никого не найдено.</p>';return;}
+const friends=getSafeFriends();
+others.forEach(u=>{
+const isF=friends.includes(u.email.toLowerCase());
+const hasS=allFriendRequests.some(r=>r&&r.fromEmail===currentUser.email&&r.toEmail===u.email&&r.status==='pending');
+const hasI=allFriendRequests.some(r=>r&&r.fromEmail===u.email&&r.toEmail===currentUser.email&&r.status==='pending');
+let s='not_friend';
+if(isF)s='friend';else if(hasS)s='sent';else if(hasI)s='incoming_request';
+container.innerHTML+=generateUserCardHTML(u,s);
+});
+}catch(e){console.error('filterPeopleList',e);}
+}
+function generateUserCardHTML(user,statusType){
+if(!isValidUser(user))return'';
+const email=user.email;
+const name=user.name||email;
+const avatar=user.avatar||`https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=007bff&color=fff`;
+let btns='';
+const msgBtn=`<button class="btn-small btn-small-secondary" onclick="switchView('chat','${email}')"><i class="fas fa-envelope"></i></button>`;
+if(statusType==='friend')btns=`${msgBtn}<button class="btn-small btn-small-danger" onclick="removeFriend('${email}')"><i class="fas fa-user-minus"></i> Удалить</button>`;
+else if(statusType==='sent')btns=`${msgBtn}<button class="btn-small btn-small-secondary" disabled><i class="fas fa-clock"></i> Отправлено</button>`;
+else if(statusType==='incoming_request')btns=`<button class="btn-small btn-small-primary" onclick="acceptFriendRequest('${email}')"><i class="fas fa-check"></i> Принять</button><button class="btn-small btn-small-danger" onclick="declineFriendRequest('${email}')"><i class="fas fa-times"></i></button>`;
+else btns=`${msgBtn}<button class="btn-small btn-small-primary" onclick="sendFriendRequest('${email}')"><i class="fas fa-user-plus"></i> Добавить</button>`;
+return `<div class="user-card"><img src="${avatar}" onclick="switchView('profile','${email}')"><div class="user-card-info" onclick="switchView('profile','${email}')"><div class="user-card-name">${name}</div><div class="user-card-email">${maskEmail(email)}</div></div><div class="user-card-actions">${btns}</div></div>`;
+}
+function sendFriendRequest(toEmail){
+try{
+toEmail=String(toEmail||'').toLowerCase();
+if(!toEmail||toEmail===currentUser.email)return;
+if(allFriendRequests.some(r=>r&&r.fromEmail===currentUser.email&&r.toEmail===toEmail&&r.status==='pending'))return alert('Отправлено');
+const rid=generateUniqueId();
+saveToDB('friendRequests/'+rid,{id:rid,fromEmail:currentUser.email,toEmail,status:'pending',timestamp:Date.now()});
+const nid=generateUniqueId();
+saveToDB('notifications/'+nid,{id:nid,toEmail,fromEmail:currentUser.email,fromName:currentUser.name,fromAvatar:currentUser.avatar,type:'friend_request',timestamp:Date.now(),read:false});
+if(!isFirebaseConfigured){initDataListeners();updateFriendsUI();filterPeopleList();if(currentProfileViewEmail===toEmail)renderProfile(toEmail);}
+}catch(e){console.error('sendFriendRequest',e);}
+}
+async function acceptFriendRequest(fromEmail){
+try{
+fromEmail=String(fromEmail||'').toLowerCase();
+if(!fromEmail)return;
+const friends=getSafeFriends();
+if(!friends.includes(fromEmail))currentUser.friends.push(fromEmail);
+saveToDB('users/'+currentUser.email.replace(/\./g,'_'),currentUser);
+const s=await getUserFromDB(fromEmail);
+if(s){
+const sFriends=toArr(s.friends).filter(e=>typeof e==='string').map(e=>e.toLowerCase());
+if(!sFriends.includes(currentUser.email))sFriends.push(currentUser.email);
+s.friends=sFriends;
+saveToDB('users/'+fromEmail.replace(/\./g,'_'),s);
+}
+const nid=generateUniqueId();
+saveToDB('notifications/'+nid,{id:nid,toEmail:fromEmail,fromEmail:currentUser.email,fromName:currentUser.name,fromAvatar:currentUser.avatar,type:'friend_accepted',timestamp:Date.now(),read:false});
+const req=allFriendRequests.find(r=>r&&r.fromEmail===fromEmail&&r.toEmail===currentUser.email&&r.status==='pending');
+if(req)deleteFromDB('friendRequests',req.id);
+const n=allNotifications.find(x=>x&&x.type==='friend_request'&&x.fromEmail===fromEmail&&String(x.toEmail||'').toLowerCase()===currentUser.email);
+if(n)deleteFromDB('notifications',n.id);
+if(!isFirebaseConfigured){localStorage.setItem('diferlink_current_user',JSON.stringify(currentUser));initDataListeners();updateFriendsUI();filterPeopleList();renderNotifications();if(currentProfileViewEmail===fromEmail)renderProfile(fromEmail);}
+}catch(e){console.error('acceptFriendRequest',e);}
+}
+function declineFriendRequest(fromEmail){
+try{
+fromEmail=String(fromEmail||'').toLowerCase();
+const req=allFriendRequests.find(r=>r&&r.fromEmail===fromEmail&&r.toEmail===currentUser.email&&r.status==='pending');
+if(req)deleteFromDB('friendRequests',req.id);
+const n=allNotifications.find(x=>x&&x.type==='friend_request'&&x.fromEmail===fromEmail&&String(x.toEmail||'').toLowerCase()===currentUser.email);
+if(n)deleteFromDB('notifications',n.id);
+if(!isFirebaseConfigured){initDataListeners();updateFriendsUI();filterPeopleList();renderNotifications();if(currentProfileViewEmail===fromEmail)renderProfile(fromEmail);}
+}catch(e){console.error('declineFriendRequest',e);}
+}
+async function removeFriend(friendEmail){
+try{
+friendEmail=String(friendEmail||'').toLowerCase();
+if(!confirm(`Удалить ${friendEmail}?`))return;
+currentUser.friends=getSafeFriends().filter(e=>e!==friendEmail);
+saveToDB('users/'+currentUser.email.replace(/\./g,'_'),currentUser);
+const f=await getUserFromDB(friendEmail);
+if(f){
+f.friends=toArr(f.friends).filter(e=>typeof e==='string'&&e.toLowerCase()!==currentUser.email);
+saveToDB('users/'+friendEmail.replace(/\./g,'_'),f);
+}
+if(!isFirebaseConfigured){localStorage.setItem('diferlink_current_user',JSON.stringify(currentUser));initDataListeners();updateFriendsUI();filterPeopleList();if(currentProfileViewEmail===friendEmail)renderProfile(friendEmail);}
+}catch(e){console.error('removeFriend',e);}
+}
 
 // ============ STORIES ============
 function renderStories(){
 const c=document.getElementById('storiesContainer');
 c.innerHTML=`<div class="story story-add" onclick="document.getElementById('addStoryModal').classList.add('show')"><div class="story-ring"><i class="fas fa-plus"></i></div><span class="story-name">Добавить</span></div>`;
-const g={};allStories.forEach(s=>{if(!s.authorAvatar)return;if(!g[s.authorEmail])g[s.authorEmail]={authorName:s.authorName,authorEmail:s.authorEmail,authorAvatar:s.authorAvatar,stories:[]};g[s.authorEmail].stories.push(s);});
+const g={};allStories.forEach(s=>{if(!s||!s.authorAvatar)return;if(!g[s.authorEmail])g[s.authorEmail]={authorName:s.authorName,authorEmail:s.authorEmail,authorAvatar:s.authorAvatar,stories:[]};g[s.authorEmail].stories.push(s);});
 Object.values(g).sort((a,b)=>Math.max(...b.stories.map(s=>s.timestamp))-Math.max(...a.stories.map(s=>s.timestamp))).forEach(gr=>{
 const v=gr.stories.every(s=>s.views&&s.views.includes(currentUser.email))||gr.authorEmail===currentUser.email;
 c.innerHTML+=`<div class="story" onclick="openStoryViewer('${gr.authorEmail}')"><div class="${v?'story-ring viewed':'story-ring'}"><img src="${gr.authorAvatar}"></div><span class="story-name">${gr.authorName?gr.authorName.split(' ')[0]:'User'}</span></div>`;
@@ -1126,7 +1264,7 @@ document.getElementById('storyUpload').onchange=function(e){const files=Array.fr
 function removeStoryMedia(i){tempStoryMedia.splice(i,1);const g=document.getElementById('storyPreviewGrid');g.innerHTML='';tempStoryMedia.forEach((m,j)=>{let ph='';if(m.type==='image')ph=`<img src="${m.data}">`;else if(m.type==='video')ph=`<div class="file-icon"><i class="fas fa-video"></i></div>`;else ph=`<div class="file-icon"><i class="fas fa-music"></i></div>`;g.innerHTML+=`<div class="preview-item">${ph}<button class="remove-preview" onclick="removeStoryMedia(${j})">×</button></div>`;});if(tempStoryMedia.length===0){document.getElementById('storyPreviewContainer').style.display='none';document.getElementById('storyLabel').innerText='Выбрать медиа';}}
 document.getElementById('publishStoryBtn').onclick=()=>{if(tempStoryMedia.length===0)return alert('Выберите медиа');const s={id:generateUniqueId(),authorName:currentUser.name,authorEmail:currentUser.email,authorAvatar:currentUser.avatar,media:[...tempStoryMedia],views:[currentUser.email],timestamp:Date.now()};saveToDB('stories/'+s.id,s);tempStoryMedia=[];document.getElementById('storyUpload').value='';document.getElementById('storyPreviewGrid').innerHTML='';document.getElementById('storyPreviewContainer').style.display='none';document.getElementById('storyLabel').innerText='Выбрать медиа';document.getElementById('addStoryModal').classList.remove('show');if(!isFirebaseConfigured)renderStories();};
 document.getElementById('cancelStoryBtn').onclick=()=>{document.getElementById('addStoryModal').classList.remove('show');tempStoryMedia=[];document.getElementById('storyUpload').value='';document.getElementById('storyPreviewGrid').innerHTML='';document.getElementById('storyPreviewContainer').style.display='none';};
-function openStoryViewer(authorEmail){const st=allStories.filter(s=>s.authorEmail===authorEmail).sort((a,b)=>a.timestamp-b.timestamp);if(st.length===0)return;currentStoryMedia=[];st.forEach(s=>{if(s.media)currentStoryMedia.push(...s.media);else if(s.images)currentStoryMedia.push(...s.images.map(i=>({type:'image',data:i})));});currentStoryMediaIndex=0;document.getElementById('viewerAuthorAvatar').src=st[0].authorAvatar;document.getElementById('viewerAuthorName').innerText=st[0].authorName;st.forEach(s=>{if(!s.views)s.views=[];if(!s.views.includes(currentUser.email)){s.views.push(currentUser.email);saveToDB('stories/'+s.id,s);}});if(!isFirebaseConfigured)renderStories();const del=document.getElementById('deleteStoryBtn');if(authorEmail===currentUser.email){del.style.display='flex';del.onclick=()=>{if(confirm('Удалить все?')){st.forEach(s=>deleteFromDB('stories',s.id));closeStoryViewer();if(!isFirebaseConfigured)renderStories();}};}else del.style.display='none';renderCurrentStoryMedia();document.getElementById('storyViewerModal').style.display='flex';}
+function openStoryViewer(authorEmail){const st=allStories.filter(s=>s&&s.authorEmail===authorEmail).sort((a,b)=>a.timestamp-b.timestamp);if(st.length===0)return;currentStoryMedia=[];st.forEach(s=>{if(s.media)currentStoryMedia.push(...s.media);else if(s.images)currentStoryMedia.push(...s.images.map(i=>({type:'image',data:i})));});currentStoryMediaIndex=0;document.getElementById('viewerAuthorAvatar').src=st[0].authorAvatar;document.getElementById('viewerAuthorName').innerText=st[0].authorName;st.forEach(s=>{if(!s.views)s.views=[];if(!s.views.includes(currentUser.email)){s.views.push(currentUser.email);saveToDB('stories/'+s.id,s);}});if(!isFirebaseConfigured)renderStories();const del=document.getElementById('deleteStoryBtn');if(authorEmail===currentUser.email){del.style.display='flex';del.onclick=()=>{if(confirm('Удалить все?')){st.forEach(s=>deleteFromDB('stories',s.id));closeStoryViewer();if(!isFirebaseConfigured)renderStories();}};}else del.style.display='none';renderCurrentStoryMedia();document.getElementById('storyViewerModal').style.display='flex';}
 function renderCurrentStoryMedia(){const c=document.getElementById('storyMediaContainer');c.querySelectorAll('.story-media-item').forEach(e=>e.remove());const m=currentStoryMedia[currentStoryMediaIndex];if(!m)return;let el;if(m.type==='image'){el=document.createElement('img');el.src=m.data;}else if(m.type==='video'){el=document.createElement('video');el.src=m.data;el.controls=true;el.autoplay=true;}else{el=document.createElement('audio');el.src=m.data;el.controls=true;el.autoplay=true;}el.className='story-media-item';c.appendChild(el);}
 function prevStoryImage(e){if(e)e.stopPropagation();if(currentStoryMediaIndex>0){currentStoryMediaIndex--;renderCurrentStoryMedia();}}
 function nextStoryImage(e){if(e)e.stopPropagation();if(currentStoryMediaIndex<currentStoryMedia.length-1){currentStoryMediaIndex++;renderCurrentStoryMedia();}else closeStoryViewer();}
@@ -1185,7 +1323,7 @@ const c=document.getElementById('postsContainer');
 c.innerHTML='';
 const now=Date.now();
 allPosts
-  .filter(p=>(!p.expiresAt||p.expiresAt>now)&&p.authorAvatar)
+  .filter(p=>p&&(!p.expiresAt||p.expiresAt>now)&&p.authorAvatar)
   .sort((a,b)=>b.timestamp-a.timestamp)
   .forEach(p=>{
     c.innerHTML+=generatePostHTML(p);
@@ -1200,8 +1338,8 @@ function toggleLike(postId,isComm){const p=allPosts.find(x=>String(x.id)===Strin
 function votePostPoll(postId,optIdx){const p=allPosts.find(x=>String(x.id)===String(postId));if(!p||!p.poll)return;const o=p.poll.options[optIdx];if(!o.votes)o.votes=[];const i=o.votes.indexOf(currentUser.email);if(i>-1)o.votes.splice(i,1);else o.votes.push(currentUser.email);saveToDB('posts/'+p.id,p);if(!isFirebaseConfigured)renderFeed();}
 
 // ============ COMMUNITIES ============
-function updateCommunitySelect(){const s=document.getElementById('postCommunitySelect');s.innerHTML='<option value="">В ленту</option>';allCommunities.forEach(c=>{if((c.members||[c.creatorEmail]).includes(currentUser.email))s.innerHTML+=`<option value="${c.id}">${c.name}</option>`;});}
-function renderCommunitiesList(){const g=document.getElementById('communitiesGrid');g.innerHTML='';if(allCommunities.length===0){g.innerHTML='<p style="color:var(--text-muted);grid-column:1/-1;text-align:center">Нет сообществ.</p>';return;}[...allCommunities].sort((a,b)=>b.timestamp-a.timestamp).forEach(c=>{g.innerHTML+=`<div class="community-card" onclick="switchView('community','${c.id}')"><img src="${c.cover||'https://dummyimage.com/500x200/007bff/ffffff&text='+encodeURIComponent(c.name)}" class="community-card-cover"><div class="community-card-info"><img src="${c.avatar||'https://ui-avatars.com/api/?name='+encodeURIComponent(c.name)+'&background=f0f2f5&color=333'}" class="community-card-avatar"><div><h3>${c.name}</h3><p>${c.description?(c.description.substring(0,40)+(c.description.length>40?'...':'')):'Без описания'}</p></div></div></div>`;});}
+function updateCommunitySelect(){const s=document.getElementById('postCommunitySelect');s.innerHTML='<option value="">В ленту</option>';allCommunities.forEach(c=>{if(c&&(c.members||[c.creatorEmail]).includes(currentUser.email))s.innerHTML+=`<option value="${c.id}">${c.name}</option>`;});}
+function renderCommunitiesList(){const g=document.getElementById('communitiesGrid');g.innerHTML='';if(allCommunities.length===0){g.innerHTML='<p style="color:var(--text-muted);grid-column:1/-1;text-align:center">Нет сообществ.</p>';return;}[...allCommunities].filter(Boolean).sort((a,b)=>b.timestamp-a.timestamp).forEach(c=>{g.innerHTML+=`<div class="community-card" onclick="switchView('community','${c.id}')"><img src="${c.cover||'https://dummyimage.com/500x200/007bff/ffffff&text='+encodeURIComponent(c.name)}" class="community-card-cover"><div class="community-card-info"><img src="${c.avatar||'https://ui-avatars.com/api/?name='+encodeURIComponent(c.name)+'&background=f0f2f5&color=333'}" class="community-card-avatar"><div><h3>${c.name}</h3><p>${c.description?(c.description.substring(0,40)+(c.description.length>40?'...':'')):'Без описания'}</p></div></div></div>`;});}
 document.getElementById('commCoverUpload').onchange=function(e){const f=e.target.files[0];if(f){const r=new FileReader();r.onload=(ev)=>{tempCommCoverBase64=ev.target.result;document.getElementById('commCoverLabel').innerText='Фото выбрано ✓';};r.readAsDataURL(f);}};
 document.getElementById('commAvatarUpload').onchange=function(e){const f=e.target.files[0];if(f){const r=new FileReader();r.onload=(ev)=>{tempCommAvatarBase64=ev.target.result;document.getElementById('commAvatarLabel').innerText='Фото выбрано ✓';};r.readAsDataURL(f);}};
 document.getElementById('cancelNewCommunityBtn').onclick=()=>{document.getElementById('createCommunityModal').classList.remove('show');tempCommCoverBase64=null;tempCommAvatarBase64=null;document.getElementById('commName').value='';document.getElementById('commDesc').value='';document.getElementById('commCoverLabel').innerText='Выбрать';document.getElementById('commAvatarLabel').innerText='Выбрать';};
@@ -1247,7 +1385,7 @@ const list=document.getElementById('editCommMembersList');
 const members=currentSettingsCommunity.members||[currentSettingsCommunity.creatorEmail];
 list.innerHTML='';
 members.forEach(email=>{
-const u=allUsersData.find(x=>x.email.toLowerCase()===email.toLowerCase());
+const u=getUserByEmail(email);
 if(!u)return;
 const isCreator=email===currentSettingsCommunity.creatorEmail;
 list.innerHTML+=`<div class="member-item"><img src="${u.avatar}"><div class="mi-info"><div class="mi-name">${u.name}${isCreator?' 👑':''}</div><div class="mi-email">${maskEmail(u.email)}</div></div>${!isCreator?`<button class="btn-small btn-small-danger" onclick="removeCommMember('${email}')"><i class="fas fa-times"></i></button>`:''}</div>`;
@@ -1278,7 +1416,7 @@ if(!currentSettingsCommunity)return;
 const q=document.getElementById('addMemberSearch').value.toLowerCase().trim();
 const container=document.getElementById('addMemberListContainer');
 const existing=(currentSettingsCommunity.members||[currentSettingsCommunity.creatorEmail]).map(e=>String(e).toLowerCase());
-let users=allUsersData.filter(u=>!existing.includes(u.email.toLowerCase()));
+let users=allUsersData.filter(u=>isValidUser(u)&&!existing.includes(u.email.toLowerCase()));
 if(q)users=users.filter(u=>u.name.toLowerCase().includes(q)||u.email.toLowerCase().includes(q));
 if(users.length===0){container.innerHTML='<p style="text-align:center;color:var(--text-muted);padding:20px">Не найдено</p>';return;}
 container.innerHTML=users.slice(0,20).map(u=>`<div class="user-card" style="cursor:pointer" onclick="addMemberToComm('${u.email}')"><img src="${u.avatar}"><div class="user-card-info"><div class="user-card-name">${u.name}</div><div class="user-card-email">${maskEmail(u.email)}</div></div><button class="btn-small btn-small-primary"><i class="fas fa-plus"></i></button></div>`).join('');
@@ -1300,108 +1438,127 @@ document.getElementById('confirmDeleteCommunityBtn').onclick=async()=>{if(!curre
 document.getElementById('cancelCommSettingsBtn').onclick=()=>{document.getElementById('settingsCommunityModal').classList.remove('show');tempEditCommCoverBase64=null;tempEditCommAvatarBase64=null;document.getElementById('editCommCoverUpload').value='';document.getElementById('editCommAvatarUpload').value='';document.getElementById('editCommCoverLabel').innerText='Выбрать';document.getElementById('editCommAvatarLabel').innerText='Выбрать';};
 
 // ============ NOTIFICATIONS ============
-function updateNotificationBadge(){const u=allNotifications.filter(n=>(n.toEmail||'').toLowerCase()===currentUser.email&&!n.read).length;const b=document.getElementById('notificationBadge');if(u>0){b.innerText=u;b.style.display='block';}else b.style.display='none';}
-function renderNotifications(){const c=document.getElementById('notificationsListContainer');c.innerHTML='';const notifs=allNotifications.filter(n=>(n.toEmail||'').toLowerCase()===currentUser.email).sort((a,b)=>b.timestamp-a.timestamp);if(notifs.length===0){c.innerHTML='<p style="text-align:center;color:var(--text-muted);padding:20px">Нет уведомлений.</p>';return;}const toRead=[];notifs.forEach(n=>{let a='';if(n.type==='friend_request'){const isP=allFriendRequests.some(r=>r.fromEmail.toLowerCase()===(n.fromEmail||'').toLowerCase()&&r.toEmail.toLowerCase()===currentUser.email&&r.status==='pending');if(isP)a=`<div class="notification-actions"><button class="btn-accept" onclick="acceptFriendRequest('${n.fromEmail}')">Принять</button><button class="btn-decline" onclick="declineFriendRequest('${n.fromEmail}')">Отклонить</button></div>`;}let t='';if(n.type==='friend_request')t=`<b>${n.fromName}</b> хочет добавить вас в друзья.`;if(n.type==='friend_accepted')t=`<b>${n.fromName}</b> принял(а) вашу заявку.`;c.innerHTML+=`<div class="notification-item"><img src="${n.fromAvatar}" onclick="switchView('profile','${n.fromEmail}')"><div class="notification-info"><div class="notification-text">${t}</div><div class="notification-time">${new Date(n.timestamp).toLocaleString()}</div>${a}</div></div>`;if(!n.read)toRead.push(n);});if(toRead.length>0)setTimeout(()=>{toRead.forEach(n=>{n.read=true;saveToDB('notifications/'+n.id,n);});},500);updateNotificationBadge();}
+function updateNotificationBadge(){const u=allNotifications.filter(n=>n&&String(n.toEmail||'').toLowerCase()===currentUser.email&&!n.read).length;const b=document.getElementById('notificationBadge');if(u>0){b.innerText=u;b.style.display='block';}else b.style.display='none';}
+function renderNotifications(){const c=document.getElementById('notificationsListContainer');c.innerHTML='';const notifs=allNotifications.filter(n=>n&&String(n.toEmail||'').toLowerCase()===currentUser.email).sort((a,b)=>b.timestamp-a.timestamp);if(notifs.length===0){c.innerHTML='<p style="text-align:center;color:var(--text-muted);padding:20px">Нет уведомлений.</p>';return;}const toRead=[];notifs.forEach(n=>{let a='';if(n.type==='friend_request'){const isP=allFriendRequests.some(r=>r&&String(r.fromEmail||'').toLowerCase()===String(n.fromEmail||'').toLowerCase()&&String(r.toEmail||'').toLowerCase()===currentUser.email&&r.status==='pending');if(isP)a=`<div class="notification-actions"><button class="btn-accept" onclick="acceptFriendRequest('${n.fromEmail}')">Принять</button><button class="btn-decline" onclick="declineFriendRequest('${n.fromEmail}')">Отклонить</button></div>`;}let t='';if(n.type==='friend_request')t=`<b>${n.fromName}</b> хочет добавить вас в друзья.`;if(n.type==='friend_accepted')t=`<b>${n.fromName}</b> принял(а) вашу заявку.`;c.innerHTML+=`<div class="notification-item"><img src="${n.fromAvatar}" onclick="switchView('profile','${n.fromEmail}')"><div class="notification-info"><div class="notification-text">${t}</div><div class="notification-time">${new Date(n.timestamp).toLocaleString()}</div>${a}</div></div>`;if(!n.read)toRead.push(n);});if(toRead.length>0)setTimeout(()=>{toRead.forEach(n=>{n.read=true;saveToDB('notifications/'+n.id,n);});},500);updateNotificationBadge();}
 
 // ============ CHATS ============
 async function renderMessagesList(){
-const c=document.getElementById('chatsListContainer');
-const token=++messagesRenderToken;
-c.innerHTML='<p style="text-align:center;color:var(--text-muted);padding:20px;font-size:13px">Загрузка...</p>';
-let allChats={};
-if(isFirebaseConfigured){const s=await db.ref('chats').once('value');allChats=s.val()||{};}
-else{const a=JSON.parse(localStorage.getItem('diferlink_chats'))||[];a.forEach(x=>{allChats[x.id]=x;});}
+  const c=document.getElementById('chatsListContainer');
+  if(!c)return;
+  const token=++messagesRenderToken;
+  c.innerHTML='<p style="text-align:center;color:var(--text-muted);padding:20px;font-size:13px">Загрузка...</p>';
 
-const me=currentUser.email.toLowerCase();
-const list=[];
+  let allChats={};
+  try{
+    if(isFirebaseConfigured){
+      const s=await db.ref('chats').once('value');
+      allChats=s.val()||{};
+    }else{
+      const a=JSON.parse(localStorage.getItem('diferlink_chats'))||[];
+      a.forEach(x=>{if(x&&x.id)allChats[x.id]=x;});
+    }
+  }catch(e){
+    console.error('renderMessagesList fetch error',e);
+    if(token===messagesRenderToken)c.innerHTML='<p style="text-align:center;color:#ff4d4d;padding:20px;font-size:13px">Ошибка загрузки чатов</p>';
+    return;
+  }
 
-Object.values(allChats).forEach(ch=>{
-if(!ch.participants)return;
-if(!ch.participants.some(e=>String(e).toLowerCase()===me))return;
-let m=[];
-if(ch.messages)m=Array.isArray(ch.messages)?ch.messages:Object.values(ch.messages);
-const lastMsg=m.length?m[m.length-1]:null;
-list.push({...ch,lastMsg});
-});
+  const me=String(currentUser.email||'').toLowerCase();
+  const list=[];
 
-// Дедупликация чатов
-const seen=new Set();
-const uniqueList=[];
-for(const ch of list){
-let key;
-if(ch.isGroup){
-key='g:'+String(ch.groupId||ch.id);
-}else{
-const peer=ch.participants.find(e=>String(e).toLowerCase()!==me);
-if(!peer)continue;
-key='u:'+String(peer).toLowerCase();
-}
-if(seen.has(key))continue;
-seen.add(key);
-uniqueList.push(ch);
-}
+  Object.values(allChats).forEach(ch=>{
+    if(!ch||typeof ch!=='object')return;
+    const participants=toArr(ch.participants);
+    if(participants.length===0)return;
+    if(!participants.some(e=>String(e).toLowerCase()===me))return;
+    let m=toArr(ch.messages);
+    const lastMsg=m.length?m[m.length-1]:null;
+    list.push({...ch,participants,lastMsg});
+  });
 
-uniqueList.sort((a,b)=>(b.lastMsg?.timestamp||b.createdAt||0)-(a.lastMsg?.timestamp||a.createdAt||0));
+  const seen=new Set();
+  const uniqueList=[];
+  for(const ch of list){
+    let key;
+    if(ch.isGroup){
+      key='g:'+String(ch.groupId||ch.id||'');
+    }else{
+      const peer=ch.participants.find(e=>String(e).toLowerCase()!==me);
+      if(!peer)continue;
+      key='u:'+String(peer).toLowerCase();
+    }
+    if(seen.has(key))continue;
+    seen.add(key);
+    uniqueList.push(ch);
+  }
 
-if(token!==messagesRenderToken)return;
+  uniqueList.sort((a,b)=>(b.lastMsg?.timestamp||b.createdAt||0)-(a.lastMsg?.timestamp||a.createdAt||0));
 
-if(uniqueList.length===0){
-c.innerHTML='<p style="text-align:center;color:var(--text-muted);padding:20px;font-size:13px">Нет сообщений.</p>';
-return;
-}
+  if(token!==messagesRenderToken)return;
+  if(uniqueList.length===0){
+    c.innerHTML='<p style="text-align:center;color:var(--text-muted);padding:20px;font-size:13px">Нет сообщений.</p>';
+    return;
+  }
 
-let html='';
+  let html='';
 
-for(const ch of uniqueList){
-const lastMsg=ch.lastMsg;
-const peerEmail=ch.participants.find(e=>String(e).toLowerCase()!==me)||ch.participants[0];
-let u,displayName,displayAvatar,isGroup=false;
+  for(const ch of uniqueList){
+    try{
+      const lastMsg=ch.lastMsg;
+      let u,displayName,displayAvatar,isGroup=false;
 
-if(ch.isGroup){
-isGroup=true;
-displayName=ch.groupName||'Группа';
-displayAvatar=ch.groupAvatar||'https://ui-avatars.com/api/?name=G&background=007bff&color=fff';
-u={email:peerEmail,avatar:displayAvatar,name:displayName};
-}else{
-const peerEmailReal=ch.participants.find(e=>String(e).toLowerCase()!==me);
-if(!peerEmailReal)continue;
-u=allUsersData.find(x=>x.email.toLowerCase()===String(peerEmailReal).toLowerCase())||await getUserFromDB(peerEmailReal);
-if(!u)continue;
-displayName=u.name;
-displayAvatar=u.avatar;
-}
+      if(ch.isGroup){
+        isGroup=true;
+        displayName=ch.groupName||'Группа';
+        displayAvatar=ch.groupAvatar||'https://ui-avatars.com/api/?name=G&background=007bff&color=fff';
+        u={email:'',avatar:displayAvatar,name:displayName};
+      }else{
+        const peerEmailReal=ch.participants.find(e=>String(e).toLowerCase()!==me);
+        if(!peerEmailReal)continue;
+        u=getUserByEmail(peerEmailReal)||await getUserFromDB(peerEmailReal);
+        if(!u)continue;
+        displayName=u.name||u.email;
+        displayAvatar=u.avatar||`https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=007bff&color=fff`;
+      }
 
-if(token!==messagesRenderToken)return;
+      if(token!==messagesRenderToken)return;
 
-let prev='Нет сообщений';
-if(lastMsg){
-prev=lastMsg.text||'';
-if(lastMsg.type==='file')prev='📎 Файл';
-else if(lastMsg.type==='audio')prev='🎵 Музыка';
-else if(lastMsg.type==='poll')prev='📊 Опрос';
-else if(lastMsg.type==='sticker')prev='🎨 Стикер';
-const isMine=lastMsg.senderEmail===currentUser.email;
-if(isMine)prev='Вы: '+prev;
-if(isGroup&&!isMine)prev=(lastMsg.senderName||'?')+': '+prev;
-}
-const time=lastMsg?new Date(lastMsg.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'';
-const on=u.lastActive&&(Date.now()-u.lastActive<ONLINE_THRESHOLD);
-const dot=isGroup?'':(on?'<div class="status-dot online"></div>':'<div class="status-dot offline"></div>');
-const groupLabel=isGroup?'<span class="group-label">ГРУППА</span>':'';
-const clickAction=isGroup?`switchView('chat', null, '${ch.groupId}')`:`switchView('chat', '${u.email}')`;
+      let prev='Нет сообщений';
+      if(lastMsg){
+        prev=lastMsg.text||'';
+        if(lastMsg.type==='file')prev='📎 Файл';
+        else if(lastMsg.type==='audio')prev='🎵 Музыка';
+        else if(lastMsg.type==='poll')prev='📊 Опрос';
+        else if(lastMsg.type==='sticker')prev='🎨 Стикер';
+        const isMine=lastMsg.senderEmail===currentUser.email;
+        if(isMine)prev='Вы: '+prev;
+        if(isGroup&&!isMine)prev=(lastMsg.senderName||'?')+': '+prev;
+      }
 
-html+=`<div class="chat-preview" data-name="${displayName.toLowerCase()}" onclick="${clickAction}">
-<img src="${displayAvatar}">
-<div class="chat-preview-info">
-<div class="chat-preview-name">${displayName} ${dot}${groupLabel}</div>
-<div class="chat-preview-text">${prev}</div>
-</div>
-<div class="chat-preview-time">${time}</div>
-</div>`;
-}
+      const time=lastMsg?new Date(lastMsg.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'';
+      const on=u.lastActive&&(Date.now()-u.lastActive<ONLINE_THRESHOLD);
+      const dot=isGroup?'':(on?'<div class="status-dot online"></div>':'<div class="status-dot offline"></div>');
+      const groupLabel=isGroup?'<span class="group-label">ГРУППА</span>':'';
 
-if(token!==messagesRenderToken)return;
-c.innerHTML=html||'<p style="text-align:center;color:var(--text-muted);padding:20px;font-size:13px">Нет сообщений.</p>';
+      const clickAction=isGroup
+        ?`switchView('chat', null, '${String(ch.groupId||'').replace(/'/g,"\\'")}')`
+        :`switchView('chat', '${String(u.email).replace(/'/g,"\\'")}')`;
+
+      html+=`<div class="chat-preview" data-name="${(displayName||'').toLowerCase()}" onclick="${clickAction}">
+        <img src="${displayAvatar}">
+        <div class="chat-preview-info">
+          <div class="chat-preview-name">${displayName} ${dot}${groupLabel}</div>
+          <div class="chat-preview-text">${prev}</div>
+        </div>
+        <div class="chat-preview-time">${time}</div>
+      </div>`;
+    }catch(e){
+      console.error('chat render skip',e);
+    }
+  }
+
+  if(token!==messagesRenderToken)return;
+  c.innerHTML=html||'<p style="text-align:center;color:var(--text-muted);padding:20px;font-size:13px">Нет сообщений.</p>';
 }
 function filterChatList(){const q=document.getElementById('chatSearchInput').value.toLowerCase().trim();document.querySelectorAll('.chat-preview').forEach(el=>{const name=el.getAttribute('data-name')||'';el.style.display=name.includes(q)?'flex':'none';});}
 
@@ -1423,11 +1580,12 @@ document.getElementById('chatReceiverStatus').innerText=`${(grpSnap.members||[])
 document.getElementById('callBtnChat').style.display='none';
 document.getElementById('gearBtnChat').style.display=(grpSnap.adminEmail===currentUser.email)?'block':'none';
 }else{
-peerEmail=peerEmail.toLowerCase();
+peerEmail=String(peerEmail||'').toLowerCase();
+if(!peerEmail){alert('Пользователь не найден');switchView('messages');return;}
 if(peerEmail===currentUser.email){alert('Нельзя себе');switchView('messages');return;}
 if(currentChatListener){currentChatListener.off();currentChatListener=null;}
 if(peerStatusListener){peerStatusListener.off();peerStatusListener=null;}
-const u=allUsersData.find(x=>x.email.toLowerCase()===peerEmail)||await getUserFromDB(peerEmail);
+const u=getUserByEmail(peerEmail)||await getUserFromDB(peerEmail);
 if(!u){alert('Не найден');switchView('messages');return;}
 currentChatUser=u;
 document.getElementById('chatReceiverAvatar').src=u.avatar;
@@ -1645,10 +1803,10 @@ document.getElementById('createGroupModal').classList.add('show');
 }
 function renderGroupMembersPickList(){
 const container=document.getElementById('groupMembersList');
-const friends=currentUser.friends||[];
+const friends=getSafeFriends();
 if(friends.length===0){container.innerHTML='<p style="text-align:center;color:var(--text-muted);padding:10px;font-size:13px">Добавьте друзей</p>';return;}
 container.innerHTML=friends.map(email=>{
-const u=allUsersData.find(x=>x.email.toLowerCase()===email.toLowerCase());
+const u=getUserByEmail(email);
 if(!u)return '';
 const checked=selectedGroupMembers.includes(email)?'checked':'';
 return `<label style="display:flex;align-items:center;gap:8px;padding:6px;cursor:pointer;border-radius:6px"><input type="checkbox" value="${email}" ${checked} onchange="toggleGroupMember('${email}',this.checked)"> <img src="${u.avatar}" style="width:24px;height:24px;border-radius:50%"> <span style="font-size:13px">${u.name}</span></label>`;
@@ -1692,7 +1850,7 @@ function renderGroupSettingsMembers(){
 if(!currentSettingsGroup)return;
 const container=document.getElementById('groupMembersSettingsList');
 container.innerHTML=(currentSettingsGroup.members||[]).map(email=>{
-const u=allUsersData.find(x=>x.email.toLowerCase()===email.toLowerCase());
+const u=getUserByEmail(email);
 if(!u)return '';
 const isAdmin=email===currentSettingsGroup.adminEmail;
 return `<div class="member-item"><img src="${u.avatar}"><div class="mi-info"><div class="mi-name">${u.name}${isAdmin?' 👑':''}</div></div>${!isAdmin?`<button class="btn-small btn-small-danger" onclick="removeGroupMember('${email}')"><i class="fas fa-times"></i></button>`:''}</div>`;
@@ -1719,8 +1877,8 @@ function filterGroupAddMemberList(){
 if(!currentSettingsGroup)return;
 const q=document.getElementById('groupAddMemberSearch').value.toLowerCase().trim();
 const container=document.getElementById('groupAddMemberListContainer');
-const friends=(currentUser.friends||[]).filter(e=>!currentSettingsGroup.members.includes(e));
-let users=friends.map(e=>allUsersData.find(u=>u.email.toLowerCase()===e.toLowerCase())).filter(Boolean);
+const friends=getSafeFriends().filter(e=>!currentSettingsGroup.members.includes(e));
+let users=friends.map(e=>getUserByEmail(e)).filter(Boolean);
 if(q)users=users.filter(u=>u.name.toLowerCase().includes(q)||u.email.toLowerCase().includes(q));
 if(users.length===0){container.innerHTML='<p style="text-align:center;color:var(--text-muted);padding:20px">Нет друзей для добавления</p>';return;}
 container.innerHTML=users.map(u=>`<div class="user-card" style="cursor:pointer" onclick="addGroupMember('${u.email}')"><img src="${u.avatar}"><div class="user-card-info"><div class="user-card-name">${u.name}</div></div><button class="btn-small btn-small-primary"><i class="fas fa-plus"></i></button></div>`).join('');
@@ -1775,8 +1933,8 @@ document.getElementById('newChatModal').classList.add('show');
 function filterNewChatList(){
 const q=document.getElementById('newChatSearch').value.toLowerCase().trim();
 const container=document.getElementById('newChatListContainer');
-const friends=currentUser.friends||[];
-let users=friends.map(e=>allUsersData.find(u=>u.email.toLowerCase()===e.toLowerCase())).filter(Boolean);
+const friends=getSafeFriends();
+let users=friends.map(e=>getUserByEmail(e)).filter(Boolean);
 if(q)users=users.filter(u=>u.name.toLowerCase().includes(q)||u.email.toLowerCase().includes(q));
 if(users.length===0){container.innerHTML='<p style="text-align:center;color:var(--text-muted);padding:20px">Нет друзей. Добавьте друзей на странице "Друзья".</p>';return;}
 container.innerHTML=users.map(u=>`<div class="user-card" style="cursor:pointer" onclick="document.getElementById('newChatModal').classList.remove('show');switchView('chat','${u.email}')"><img src="${u.avatar}"><div class="user-card-info"><div class="user-card-name">${u.name}</div><div class="user-card-email">${maskEmail(u.email)}</div></div><i class="fas fa-comment"></i></div>`).join('');
